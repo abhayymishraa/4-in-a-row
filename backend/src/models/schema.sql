@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS players (
 
 CREATE TABLE IF NOT EXISTS games (
   id VARCHAR(255) PRIMARY KEY,
-  player1_id VARCHAR(255) NOT NULL REFERENCES players(id),
-  player2_id VARCHAR(255) NOT NULL REFERENCES players(id),
+  player1_id VARCHAR(255) REFERENCES players(id),
+  player2_id VARCHAR(255) REFERENCES players(id),
   winner_id VARCHAR(255) REFERENCES players(id),
   status VARCHAR(50) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

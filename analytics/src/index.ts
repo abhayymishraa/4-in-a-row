@@ -238,35 +238,48 @@ async function startConsumer() {
   const consumer = kafka.consumer({ groupId });
   const analyticsService = new AnalyticsService();
 
-  try {
-    await consumer.connect();
-    logger.info('Kafka consumer connected');
+  const maxRetries = 5;
+  const retryDelay = 5000;
 
-    await consumer.subscribe({ topic: 'game-events', fromBeginning: false });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await consumer.connect();
+      logger.info('Kafka consumer connected');
 
-    await consumer.run({
-      eachMessage: async ({ topic, partition, message }) => {
-        try {
-          const event: GameEvent = JSON.parse(message.value?.toString() || '{}');
-          analyticsService.processEvent(event);
-        } catch (error) {
-          logger.error('Error processing message', { error, topic, partition });
+      await consumer.subscribe({ topic: 'game-events', fromBeginning: false });
+
+      await consumer.run({
+        eachMessage: async ({ topic, partition, message }) => {
+          try {
+            const event: GameEvent = JSON.parse(message.value?.toString() || '{}');
+            analyticsService.processEvent(event);
+          } catch (error) {
+            logger.error('Error processing message', { error, topic, partition });
+          }
         }
+      });
+
+      setInterval(() => {
+        analyticsService.logAggregateMetrics();
+      }, 60000);
+
+      process.on('SIGTERM', async () => {
+        logger.info('SIGTERM received, shutting down gracefully');
+        await consumer.disconnect();
+        process.exit(0);
+      });
+
+      return;
+    } catch (error) {
+      if (attempt === maxRetries) {
+        logger.error('Failed to start consumer after retries', { error, attempts: maxRetries });
+        logger.warn('Analytics service will exit. Please ensure Kafka is running.');
+        process.exit(1);
+      } else {
+        logger.warn(`Kafka connection attempt ${attempt}/${maxRetries} failed, retrying...`, { error });
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
-    });
-
-    setInterval(() => {
-      analyticsService.logAggregateMetrics();
-    }, 60000);
-
-    process.on('SIGTERM', async () => {
-      logger.info('SIGTERM received, shutting down gracefully');
-      await consumer.disconnect();
-      process.exit(0);
-    });
-  } catch (error) {
-    logger.error('Failed to start consumer', { error });
-    process.exit(1);
+    }
   }
 }
 

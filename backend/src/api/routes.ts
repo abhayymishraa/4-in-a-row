@@ -13,6 +13,7 @@ export function createRoutes(databaseService: DatabaseService): Router {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const leaderboard = await databaseService.getLeaderboard(limit);
+      logger.debug('Leaderboard API called', { limit, resultCount: leaderboard.length });
       res.json({ leaderboard });
     } catch (error) {
       logger.error('Error fetching leaderboard', { error });

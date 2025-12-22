@@ -31,13 +31,32 @@ export class KafkaProducer {
       return;
     }
 
-    try {
-      await this.producer.connect();
-      this.isConnected = true;
-      logger.info('Kafka producer connected');
-    } catch (error) {
-      logger.error('Failed to connect Kafka producer', { error });
-      this.isConnected = false;
+    const maxRetries = 3;
+    const retryDelay = 5000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await Promise.race([
+          this.producer.connect(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Connection timeout')), 10000)
+          )
+        ]);
+        this.isConnected = true;
+        logger.info('Kafka producer connected');
+        return;
+      } catch (error: any) {
+        if (attempt === maxRetries) {
+          logger.warn('Kafka producer not connected after retries. Server will continue without analytics.', { 
+            attempts: maxRetries,
+            error: error.message || error
+          });
+          this.isConnected = false;
+        } else {
+          logger.debug(`Kafka connection attempt ${attempt}/${maxRetries} failed, retrying in ${retryDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+      }
     }
   }
 

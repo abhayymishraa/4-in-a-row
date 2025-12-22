@@ -1,4 +1,5 @@
 import { Board, CellValue } from './Board';
+import { WinChecker } from './WinChecker';
 
 export type GameStatus = 'playing' | 'won' | 'draw';
 
@@ -34,8 +35,18 @@ export class GameEngine {
     const newBoard = this.board.placeDisc(column, this.currentPlayer);
     const row = this.findRowForColumn(column, newBoard);
 
-    const winResult = this.checkWin(row, column, this.currentPlayer, newBoard);
+    if (row < 0) {
+      throw new Error(`Failed to find row for column ${column}`);
+    }
+
+    const placedPlayer = newBoard.getCell(row, column);
+    if (placedPlayer !== this.currentPlayer) {
+      throw new Error(`Disc placement mismatch: expected ${this.currentPlayer}, got ${placedPlayer}`);
+    }
+
+    const winResult = WinChecker.checkWin(row, column, this.currentPlayer, newBoard);
     if (winResult) {
+      this.board = newBoard;
       return {
         row,
         col: column,
@@ -45,6 +56,7 @@ export class GameEngine {
     }
 
     if (newBoard.isFull()) {
+      this.board = newBoard;
       return {
         row,
         col: column,
@@ -63,69 +75,32 @@ export class GameEngine {
   }
 
   getGameStatus(): GameStatus {
+    const winner = WinChecker.findWinner(this.board);
+    if (winner) {
+      return 'won';
+    }
     if (this.board.isFull()) {
       return 'draw';
     }
     return 'playing';
   }
 
-  checkWin(row: number, col: number, player: number, board?: Board): boolean {
-    const boardToCheck = board || this.board;
-    return (
-      this.checkDirection(row, col, player, 0, 1, boardToCheck) ||
-      this.checkDirection(row, col, player, 1, 0, boardToCheck) ||
-      this.checkDirection(row, col, player, 1, 1, boardToCheck) ||
-      this.checkDirection(row, col, player, 1, -1, boardToCheck)
-    );
+  hasWinner(): boolean {
+    return WinChecker.findWinner(this.board) !== null;
   }
 
-  private checkDirection(
-    row: number,
-    col: number,
-    player: number,
-    deltaRow: number,
-    deltaCol: number,
-    board: Board
-  ): boolean {
-    let count = 1;
-
-    for (let i = 1; i < 4; i++) {
-      const newRow = row + deltaRow * i;
-      const newCol = col + deltaCol * i;
-      if (
-        newRow >= 0 &&
-        newRow < Board.getRows() &&
-        newCol >= 0 &&
-        newCol < Board.getCols() &&
-        board.getCell(newRow, newCol) === player
-      ) {
-        count++;
-      } else {
-        break;
-      }
-    }
-
-    for (let i = 1; i < 4; i++) {
-      const newRow = row - deltaRow * i;
-      const newCol = col - deltaCol * i;
-      if (
-        newRow >= 0 &&
-        newRow < Board.getRows() &&
-        newCol >= 0 &&
-        newCol < Board.getCols() &&
-        board.getCell(newRow, newCol) === player
-      ) {
-        count++;
-      } else {
-        break;
-      }
-    }
-
-    return count >= 4;
+  getWinner(): number | null {
+    return WinChecker.findWinner(this.board);
   }
 
   private findRowForColumn(column: number, board: Board): number {
-    for (let row = Board.getRows() - 1; row >= 0; row--) {
+    // Find the topmost non-empty cell (the disc that was just placed)
+    // Discs stack from bottom to top visually, but in the array:
+    // - Row 0 is top (visually highest)
+    // - Row 5 is bottom (visually lowest)
+    // - New discs are placed at the lowest available row number (highest position)
+    // - So searching from top (row 0) finds the newest disc first
+    for (let row = 0; row < Board.getRows(); row++) {
       if (board.getCell(row, column) !== 0) {
         return row;
       }
@@ -141,4 +116,5 @@ export class GameEngine {
     return new GameEngine(this.board, this.currentPlayer);
   }
 }
+
 

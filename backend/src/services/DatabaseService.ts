@@ -43,6 +43,17 @@ export class DatabaseService {
       const schema = fs.readFileSync(schemaPath, 'utf8');
       
       await this.pool.query(schema);
+      
+      await this.pool.query(`
+        ALTER TABLE games 
+        ALTER COLUMN player1_id DROP NOT NULL,
+        ALTER COLUMN player2_id DROP NOT NULL;
+      `).catch((error: any) => {
+        if (error.code !== '42704' && error.code !== '42804') {
+          logger.warn('Could not alter games table columns (may already be nullable)', { error: error?.message });
+        }
+      });
+      
       logger.info('Database schema initialized');
     } catch (error) {
       logger.error('Failed to initialize database schema', { error });
@@ -50,17 +61,36 @@ export class DatabaseService {
     }
   }
 
-  async savePlayer(playerId: string, username: string): Promise<void> {
-    const query = `
+  async savePlayer(playerId: string, username: string): Promise<string> {
+    const checkQuery = `SELECT id FROM players WHERE username = $1`;
+    const insertQuery = `
       INSERT INTO players (id, username)
       VALUES ($1, $2)
       ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username
     `;
     
     try {
-      await this.pool.query(query, [playerId, username]);
+      const existingPlayer = await this.pool.query(checkQuery, [username]);
+      
+      if (existingPlayer.rows.length > 0) {
+        const existingId = existingPlayer.rows[0].id;
+        logger.debug('Player with username already exists, using existing ID', { 
+          existingId, 
+          newId: playerId, 
+          username 
+        });
+        return existingId;
+      }
+
+      await this.pool.query(insertQuery, [playerId, username]);
       logger.debug('Player saved', { playerId, username });
-    } catch (error) {
+      return playerId;
+    } catch (error: any) {
+      if (error.code === '23505') {
+        logger.debug('Player already exists, skipping save', { playerId, username });
+        const existing = await this.pool.query(checkQuery, [username]);
+        return existing.rows.length > 0 ? existing.rows[0].id : playerId;
+      }
       logger.error('Failed to save player', { error, playerId, username });
       throw error;
     }
@@ -72,40 +102,76 @@ export class DatabaseService {
     try {
       await client.query('BEGIN');
 
-      await this.savePlayer(game.player1.id, game.player1.username);
-      await this.savePlayer(game.player2.id, game.player2.username);
+      let dbPlayer1Id: string | null = null;
+      let dbPlayer2Id: string | null = null;
 
-      const winnerId = game.getWinner()?.id || null;
+      if (game.player1.isHuman()) {
+        try {
+          dbPlayer1Id = await this.savePlayer(game.player1.id, game.player1.username);
+        } catch (error: any) {
+          logger.warn('Failed to save player1, continuing', { error: error?.message, playerId: game.player1.id });
+        }
+      }
+
+      if (game.player2.isHuman()) {
+        try {
+          dbPlayer2Id = await this.savePlayer(game.player2.id, game.player2.username);
+        } catch (error: any) {
+          logger.warn('Failed to save player2, continuing', { error: error?.message, playerId: game.player2.id });
+        }
+      }
+
+      const winner = game.getWinner();
       const status = game.getStatus() === 'won' ? 'completed' : game.getStatus();
+      
+      let finalWinnerId: string | null = null;
+      if (winner) {
+        if (game.player1.id === winner.id && game.player1.isHuman()) {
+          finalWinnerId = dbPlayer1Id;
+        } else if (game.player2.id === winner.id && game.player2.isHuman()) {
+          finalWinnerId = dbPlayer2Id;
+        }
+      }
 
-      const gameQuery = `
-        INSERT INTO games (id, player1_id, player2_id, winner_id, status, created_at, completed_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-      `;
+      if (dbPlayer1Id || dbPlayer2Id) {
+        const gameQuery = `
+          INSERT INTO games (id, player1_id, player2_id, winner_id, status, created_at, completed_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `;
 
-      await client.query(gameQuery, [
-        game.id,
-        game.player1.id,
-        game.player2.id,
-        winnerId,
-        status,
-        game.createdAt,
-        game.getStatus() !== 'playing' ? new Date() : null
-      ]);
+        await client.query(gameQuery, [
+          game.id,
+          dbPlayer1Id,
+          dbPlayer2Id,
+          finalWinnerId,
+          status,
+          game.createdAt,
+          game.getStatus() !== 'playing' ? new Date() : null
+        ]);
 
-      if (winnerId) {
-        await client.query(
-          'UPDATE players SET games_won = games_won + 1 WHERE id = $1',
-          [winnerId]
-        );
+        if (finalWinnerId) {
+          await client.query(
+            'UPDATE players SET games_won = games_won + 1 WHERE id = $1',
+            [finalWinnerId]
+          );
+          logger.info('Updated games_won for winner', { winnerId: finalWinnerId, username: winner?.username });
+        }
+      } else {
+        logger.debug('Skipping game save - both players are bots', { gameId: game.id });
       }
 
       await client.query('COMMIT');
-      logger.info('Game saved', { gameId: game.id, winnerId });
-    } catch (error) {
+      logger.info('Game saved', { gameId: game.id, winnerId: finalWinnerId, winner: winner?.username });
+    } catch (error: any) {
       await client.query('ROLLBACK');
-      logger.error('Failed to save game', { error, gameId: game.id });
-      throw error;
+      if (error.code === '23505') {
+        logger.warn('Game save failed due to duplicate key, but game state is preserved', { 
+          error: error?.message, 
+          gameId: game.id 
+        });
+      } else {
+        logger.error('Failed to save game', { error, gameId: game.id });
+      }
     } finally {
       client.release();
     }
@@ -140,25 +206,28 @@ export class DatabaseService {
   async getLeaderboard(limit: number = 10): Promise<LeaderboardEntry[]> {
     const query = `
       SELECT id, username, games_won,
-             ROW_NUMBER() OVER (ORDER BY games_won DESC) as rank
+             ROW_NUMBER() OVER (ORDER BY games_won DESC, username ASC) as rank
       FROM players
-      WHERE games_won > 0
-      ORDER BY games_won DESC
+      WHERE LOWER(username) != 'bot'
+      ORDER BY games_won DESC, username ASC
       LIMIT $1
     `;
 
     try {
       const result: QueryResult = await this.pool.query(query, [limit]);
       
-      return result.rows.map((row) => ({
+      const leaderboard = result.rows.map((row) => ({
         id: row.id,
         username: row.username,
         gamesWon: parseInt(row.games_won) || 0,
         rank: parseInt(row.rank)
       }));
-    } catch (error) {
-      logger.error('Failed to get leaderboard', { error });
-      throw error;
+
+      logger.debug('Leaderboard fetched', { count: leaderboard.length, limit });
+      return leaderboard;
+    } catch (error: any) {
+      logger.error('Failed to get leaderboard', { error, errorMessage: error?.message });
+      return [];
     }
   }
 

@@ -25,7 +25,11 @@ export class Game {
   }
 
   getStatus(): GameStatus {
-    return this.engine.getGameStatus();
+    if (this.winnerId) {
+      return 'won';
+    }
+    const engineStatus = this.engine.getGameStatus();
+    return engineStatus;
   }
 
   isPlayerTurn(playerId: string): boolean {
@@ -44,6 +48,16 @@ export class Game {
     if (moveResult.status === 'won' && moveResult.winner) {
       const winner = moveResult.winner === 1 ? this.player1 : this.player2;
       this.winnerId = winner.id;
+      
+      const engineWinner = this.engine.getWinner();
+      if (engineWinner !== moveResult.winner) {
+        throw new Error(`Win detection mismatch: moveResult.winner=${moveResult.winner}, engine.getWinner()=${engineWinner}`);
+      }
+    } else if (moveResult.status === 'draw') {
+      this.winnerId = null;
+      if (this.engine.getGameStatus() !== 'draw') {
+        throw new Error(`Draw detection mismatch: moveResult.status=draw but engine.getGameStatus()=${this.engine.getGameStatus()}`);
+      }
     }
   }
 

@@ -3,27 +3,39 @@ import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL = 'http://localhost:3000';
 
+let globalSocket: Socket | null = null;
+
 export function useSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    const newSocket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling']
-    });
+    if (!globalSocket) {
+      globalSocket = io(SOCKET_URL, {
+        transports: ['websocket', 'polling']
+      });
 
-    newSocket.on('connect', () => {
-      setConnected(true);
-    });
+      globalSocket.on('connect', () => {
+        setConnected(true);
+      });
 
-    newSocket.on('disconnect', () => {
-      setConnected(false);
-    });
+      globalSocket.on('disconnect', () => {
+        setConnected(false);
+      });
+    }
 
-    setSocket(newSocket);
+    setSocket(globalSocket);
+    setConnected(globalSocket.connected);
+
+    const handleConnect = () => setConnected(true);
+    const handleDisconnect = () => setConnected(false);
+
+    globalSocket.on('connect', handleConnect);
+    globalSocket.on('disconnect', handleDisconnect);
 
     return () => {
-      newSocket.close();
+      globalSocket?.off('connect', handleConnect);
+      globalSocket?.off('disconnect', handleDisconnect);
     };
   }, []);
 

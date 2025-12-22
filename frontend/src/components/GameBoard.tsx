@@ -1,4 +1,5 @@
 import React from 'react';
+import { useGameEngine } from '../hooks/useGameEngine';
 
 interface GameBoardProps {
   game: any;
@@ -7,6 +8,8 @@ interface GameBoardProps {
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({ game, onMakeMove, currentUsername }) => {
+  const { validateMove } = useGameEngine(game);
+
   if (!game || !game.board) return null;
 
   const board = game.board;
@@ -14,9 +17,19 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onMakeMove, currentUsername
   const isGameOver = game.status === 'won' || game.status === 'draw';
 
   const handleColumnClick = (column: number) => {
-    if (!isGameOver && isCurrentPlayerTurn) {
-      onMakeMove(column);
+    if (isGameOver) {
+      return;
     }
+
+    if (!isCurrentPlayerTurn) {
+      return;
+    }
+
+    if (!validateMove(column)) {
+      return;
+    }
+
+    onMakeMove(column);
   };
 
   const getCellColor = (cell: number): string => {
@@ -26,21 +39,43 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onMakeMove, currentUsername
   };
 
   return (
-    <div style={{ marginTop: '20px' }}>
-      <div style={{ display: 'flex', gap: '5px', marginBottom: '5px', justifyContent: 'center' }}>
-        {board[0].map((_, col) => (
+    <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${board[0].length}, 50px)`,
+          gap: '5px',
+          marginBottom: '5px',
+          padding: '0 10px'
+        }}
+      >
+        {board[0].map((_cell: number, col: number) => (
           <button
             key={col}
             onClick={() => handleColumnClick(col)}
             disabled={isGameOver || !isCurrentPlayerTurn}
             style={{
-              padding: '8px 12px',
-              fontSize: '14px',
+              width: '50px',
+              height: '40px',
+              padding: '0',
+              fontSize: '16px',
+              fontWeight: 'bold',
               backgroundColor: isGameOver || !isCurrentPlayerTurn ? '#ccc' : '#4caf50',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: isGameOver || !isCurrentPlayerTurn ? 'not-allowed' : 'pointer'
+              cursor: isGameOver || !isCurrentPlayerTurn ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              if (!isGameOver && isCurrentPlayerTurn) {
+                e.currentTarget.style.backgroundColor = '#45a049';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isGameOver && isCurrentPlayerTurn) {
+                e.currentTarget.style.backgroundColor = '#4caf50';
+              }
             }}
           >
             {col + 1}
@@ -52,7 +87,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onMakeMove, currentUsername
           display: 'grid',
           gridTemplateColumns: `repeat(${board[0].length}, 50px)`,
           gap: '5px',
-          justifyContent: 'center',
           padding: '10px',
           background: '#fff',
           borderRadius: '8px',

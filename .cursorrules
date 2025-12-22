@@ -1,0 +1,34 @@
+# Coding Standards
+
+## General Rules
+- No emojis in code, comments, or documentation
+- Write simple, understandable code
+- Use clear, descriptive variable and function names
+- Keep functions small and focused on a single responsibility
+- Prefer composition over inheritance where possible
+
+## Code Style
+- Use TypeScript for type safety
+- Follow consistent indentation (2 spaces)
+- Use meaningful comments only when necessary
+- Remove unused imports and variables
+- Keep line length reasonable (max 100 characters)
+
+## Logging
+- Use structured logging with Winston
+- Include context in logs (gameId, playerId, etc.)
+- Log at appropriate levels: error, warn, info, debug
+- Never log sensitive information (passwords, tokens)
+
+## Error Handling
+- Always handle errors explicitly
+- Provide meaningful error messages
+- Use try-catch blocks for async operations
+- Return appropriate HTTP status codes
+
+## Architecture
+- Keep business logic separate from API layer
+- Use service classes for complex operations
+- Keep core game logic pure and testable
+- Use dependency injection where appropriate
+

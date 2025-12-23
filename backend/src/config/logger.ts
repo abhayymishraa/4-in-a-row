@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 
 const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+const isCloudPlatform = !!process.env.RENDER || !!process.env.RAILWAY_ENVIRONMENT || !!process.env.FLY_APP_NAME;
 const logDir = path.join(process.cwd(), 'logs');
 
 const logFormat = winston.format.combine(
@@ -26,7 +27,9 @@ const consoleFormat = winston.format.combine(
 
 const transports: winston.transport[] = [];
 
-if (isServerless) {
+// Always add console transport for cloud platforms (Render, Railway, Fly.io)
+// These platforms need stdout/stderr to display logs
+if (isServerless || isCloudPlatform) {
   transports.push(
     new winston.transports.Console({
       format: consoleFormat
@@ -53,13 +56,13 @@ if (isServerless) {
     );
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    transports.push(
-      new winston.transports.Console({
-        format: consoleFormat
-      })
-    );
-  }
+  // Always add console transport for local development
+  // For production on cloud platforms, console is added above
+  transports.push(
+    new winston.transports.Console({
+      format: consoleFormat
+    })
+  );
 }
 
 export const logger = winston.createLogger({

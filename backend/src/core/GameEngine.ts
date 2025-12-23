@@ -1,4 +1,4 @@
-import { Board, CellValue } from './Board';
+import { Board } from './Board';
 import { WinChecker } from './WinChecker';
 
 export type GameStatus = 'playing' | 'won' | 'draw';

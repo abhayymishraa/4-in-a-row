@@ -30,4 +30,3 @@ CREATE INDEX IF NOT EXISTS idx_games_player2 ON games(player2_id);
 CREATE INDEX IF NOT EXISTS idx_games_winner ON games(winner_id);
 CREATE INDEX IF NOT EXISTS idx_game_moves_game_id ON game_moves(game_id);
 CREATE INDEX IF NOT EXISTS idx_game_moves_player_id ON game_moves(player_id);
-

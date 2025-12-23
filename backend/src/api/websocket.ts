@@ -778,11 +778,8 @@ export class WebSocketHandler {
   private async handleGameForfeit(game: any, forfeitingPlayerId: string): Promise<void> {
     const winner = game.player1.id === forfeitingPlayerId ? game.player2 : game.player1;
     
-    const engine = game.getEngine();
-    const status = 'won';
-    
     await this.databaseService.saveGame(game);
-    await this.kafkaProducer.emitGameCompleted(game.id, winner.id, status);
+    await this.kafkaProducer.emitGameCompleted(game.id, winner.id, 'won');
 
     this.io.to(game.id).emit('game-over', {
       game: game.toJSON(),

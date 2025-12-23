@@ -33,7 +33,7 @@ const databaseService = new DatabaseService();
 const matchmakingService = new MatchmakingService(gameStateManager);
 const kafkaProducer = new KafkaProducer();
 
-const websocketHandler = new WebSocketHandler(
+new WebSocketHandler(
   httpServer,
   gameStateManager,
   matchmakingService,

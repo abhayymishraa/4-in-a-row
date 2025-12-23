@@ -1,6 +1,5 @@
 import { Player } from '../core/Player';
 import { GameStateManager } from './GameStateManager';
-import { BotService } from './BotService';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../config/logger';
 

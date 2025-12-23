@@ -5,7 +5,7 @@ import { logger } from '../config/logger';
 export function createRoutes(databaseService: DatabaseService): Router {
   const router = Router();
 
-  router.get('/health', (req: Request, res: Response) => {
+  router.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 

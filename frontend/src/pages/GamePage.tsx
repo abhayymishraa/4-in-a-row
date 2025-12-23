@@ -19,14 +19,16 @@ function GamePage() {
 
     const storedUsername = localStorage.getItem('username');
     const isCreator = localStorage.getItem('isGameCreator') === 'true';
-    
+
     if (storedUsername) {
       setUsername(storedUsername);
-      
+
       if (!isCreator) {
         socket.emit('join-game', { username: storedUsername, gameId });
       } else {
         localStorage.removeItem('isGameCreator');
+        // Start countdown immediately for game creators
+        setBotCountdown(10);
       }
     } else {
       navigate('/');
@@ -35,6 +37,9 @@ function GamePage() {
 
     let countdownInterval: ReturnType<typeof setInterval> | null = null;
     const startCountdown = (seconds: number) => {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
       setBotCountdown(seconds);
       countdownInterval = setInterval(() => {
         setBotCountdown((prev) => {
@@ -46,6 +51,11 @@ function GamePage() {
         });
       }, 1000);
     };
+
+    // Start countdown for creators immediately
+    if (isCreator) {
+      startCountdown(10);
+    }
 
     socket.on('game-created', (data: { gameId: string; game?: any; waiting?: boolean; botJoinTime: number }) => {
       if (data.waiting) {
@@ -133,7 +143,7 @@ function GamePage() {
   if (loading) {
     return (
       <div className="p-5 text-center max-w-2xl mx-auto">
-        <h2 className="text-2xl font-bold mb-5">Waiting for opponent...</h2>
+        <h2 className="text-3xl font-bold text-gray-800 mb-5">Waiting for opponent...</h2>
         
         <div className="p-5 bg-blue-50 text-blue-800 mt-5 rounded-lg border border-blue-200">
           <p className="mb-3 font-bold">Share this Game ID with a friend:</p>
@@ -154,21 +164,34 @@ function GamePage() {
         </div>
 
         {botCountdown !== null && botCountdown > 0 && (
-          <div className="p-5 bg-orange-50 text-orange-700 mt-5 rounded-lg">
-            <p className="mb-3 font-bold">
-              If no participant joins, a bot will automatically join in <strong>{botCountdown}</strong> second{botCountdown !== 1 ? 's' : ''}.
+          <div className="p-5 bg-blue-50 text-blue-800 mt-5 rounded-lg border border-blue-200">
+            <p className="mb-3 font-semibold text-center">
+               Bot Auto-Join Timer
             </p>
-            <div className="w-full h-2.5 bg-orange-200 rounded overflow-hidden mt-3">
-              <div 
-                className="h-full bg-orange-500 transition-all duration-1000 ease-linear"
+            <div className="w-full h-4 bg-blue-200 rounded-full overflow-hidden mt-3">
+              <div
+                className="h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-1000 ease-linear rounded-full relative"
                 style={{ width: `${((10 - botCountdown) / 10) * 100}%` }}
-              />
+              >
+                <div className="absolute inset-0 bg-white opacity-30 animate-pulse"></div>
+              </div>
             </div>
+            <div className="mt-3 flex justify-between text-sm text-blue-700 font-medium">
+              <span>0s</span>
+              <span className="font-bold text-blue-900">{botCountdown}s left</span>
+              <span>10s</span>
+            </div>
+            <p className="mt-3 text-sm text-blue-700 italic">
+              If no one joins in <span className="font-bold">{botCountdown}</span> second{botCountdown !== 1 ? 's' : ''}, a bot will automatically join
+            </p>
           </div>
         )}
         {botCountdown === 0 && (
-          <div className="p-5 bg-green-50 text-green-700 mt-5 rounded-lg">
-            <p>Bot is joining the game...</p>
+          <div className="p-5 bg-green-50 text-green-800 mt-5 rounded-lg border border-green-200">
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-6 h-6 border-3 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="font-semibold text-lg">Bot is joining the game...</p>
+            </div>
           </div>
         )}
       </div>

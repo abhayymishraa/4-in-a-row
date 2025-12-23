@@ -13,31 +13,54 @@ export function useSocket() {
   useEffect(() => {
     if (!globalSocket) {
       globalSocket = io(SOCKET_URL, {
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: Infinity
       });
 
       globalSocket.on('connect', () => {
+        console.log('Socket connected');
         setConnected(true);
       });
 
-      globalSocket.on('disconnect', () => {
+      globalSocket.on('disconnect', (reason) => {
+        console.log('Socket disconnected:', reason);
         setConnected(false);
+        if (reason === 'io server disconnect') {
+          globalSocket?.connect();
+        }
+      });
+
+      globalSocket.on('reconnect', (attemptNumber) => {
+        console.log('Socket reconnected after', attemptNumber, 'attempts');
+        setConnected(true);
       });
     }
 
-    setSocket(globalSocket);
-    setConnected(globalSocket.connected);
+    const currentSocket = globalSocket;
+    if (currentSocket) {
+      setSocket(currentSocket);
+      setConnected(currentSocket.connected);
 
-    const handleConnect = () => setConnected(true);
-    const handleDisconnect = () => setConnected(false);
+      const handleConnect = () => {
+        console.log('Socket connected (handler)');
+        setConnected(true);
+      };
+      const handleDisconnect = () => {
+        console.log('Socket disconnected (handler)');
+        setConnected(false);
+      };
 
-    globalSocket.on('connect', handleConnect);
-    globalSocket.on('disconnect', handleDisconnect);
+      currentSocket.on('connect', handleConnect);
+      currentSocket.on('disconnect', handleDisconnect);
 
-    return () => {
-      globalSocket?.off('connect', handleConnect);
-      globalSocket?.off('disconnect', handleDisconnect);
-    };
+      return () => {
+        currentSocket.off('connect', handleConnect);
+        currentSocket.off('disconnect', handleDisconnect);
+      };
+    }
   }, []);
 
   return { socket, connected };

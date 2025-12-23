@@ -12,8 +12,13 @@ function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (socket && connected) {
+      setError('');
+    }
+  }, [socket, connected]);
+
+  useEffect(() => {
     if (!socket) {
-      setError('Not connected to server. Please refresh the page.');
       return;
     }
 
@@ -38,7 +43,9 @@ function HomePage() {
 
     const handleError = (data: { message: string }) => {
       console.error('Socket error:', data.message);
-      setError(data.message || 'An error occurred. Please try again.');
+      if (!data.message.includes('not connected')) {
+        setError(data.message || 'An error occurred. Please try again.');
+      }
     };
 
     socket.on('game-created', handleGameCreated);
@@ -56,8 +63,7 @@ function HomePage() {
     });
 
     socket.on('disconnect', () => {
-      console.log('Socket disconnected');
-      setError('Connection lost. Please refresh the page.');
+      console.log('Socket disconnected - will reconnect automatically');
     });
 
     return () => {

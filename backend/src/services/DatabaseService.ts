@@ -17,29 +17,50 @@ export interface LeaderboardEntry {
 
 export class DatabaseService {
   private pool: Pool;
-
-  private isInitialized: boolean = false;
+  private _isInitialized: boolean = false;
 
   constructor() {
-    this.pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      database: process.env.DB_NAME || 'emittr_game',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-      ssl: process.env.DB_HOST?.includes('supabase.co') ? { rejectUnauthorized: false } : false,
+    const dbHost = process.env.DB_HOST || 'localhost';
+    const dbPort = parseInt(process.env.DB_PORT || '5432');
+    const dbName = process.env.DB_NAME || 'emittr_game';
+    const dbUser = process.env.DB_USER || 'postgres';
+    const dbPassword = process.env.DB_PASSWORD || 'postgres';
+    
+    logger.info('Initializing database connection pool', {
+      host: dbHost,
+      port: dbPort,
+      database: dbName,
+      user: dbUser,
+      hasPassword: !!dbPassword
     });
 
-    this.pool.on('error', (err) => {
-      logger.error('Unexpected error on idle client', { error: err });
+    this.pool = new Pool({
+      host: dbHost,
+      port: dbPort,
+      database: dbName,
+      user: dbUser,
+      password: dbPassword,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      ssl: dbHost.includes('supabase.co') ? { rejectUnauthorized: false } : false,
+    });
+
+    this.pool.on('error', (err: any) => {
+      logger.error('Unexpected error on idle database client', { 
+        error: err.message,
+        code: err.code,
+        stack: err.stack
+      });
+    });
+
+    this.pool.on('connect', () => {
+      logger.debug('New database client connected');
     });
   }
 
   async initialize(): Promise<void> {
-    if (this.isInitialized) {
+    if (this._isInitialized) {
       logger.debug('Database already initialized, skipping.');
       return;
     }
@@ -50,12 +71,15 @@ export class DatabaseService {
         database: process.env.DB_NAME 
       });
 
+      logger.info('📋 Loading and executing database schema...');
       const fs = require('fs');
       const path = require('path');
       const schemaPath = path.join(__dirname, '../models/schema.sql');
       const schema = fs.readFileSync(schemaPath, 'utf8');
       
+      logger.debug('Executing schema SQL...');
       await this.pool.query(schema);
+      logger.info('✅ Database schema executed successfully');
       
       await this.pool.query(`
         ALTER TABLE games 
@@ -77,23 +101,46 @@ export class DatabaseService {
         }
       });
       
-      this.isInitialized = true;
-      logger.info('Database schema initialized successfully');
-    } catch (error: any) {
-      logger.error('Failed to initialize database schema', { 
-        error: error?.message || error,
-        code: error?.code,
-        host: process.env.DB_HOST 
+      this._isInitialized = true;
+      logger.info('✅✅✅ Database FULLY initialized and ready for operations ✅✅✅', {
+        host: process.env.DB_HOST,
+        database: process.env.DB_NAME,
+        user: process.env.DB_USER,
+        initialized: true
       });
+    } catch (error: any) {
+      this._isInitialized = false;
+      logger.error('❌❌❌ Database initialization FAILED ❌❌❌', { 
+        error: error?.message || error,
+        code: (error as any)?.code,
+        host: process.env.DB_HOST || 'NOT SET',
+        database: process.env.DB_NAME || 'NOT SET',
+        user: process.env.DB_USER || 'NOT SET',
+        port: process.env.DB_PORT || 'NOT SET',
+        hasPassword: !!process.env.DB_PASSWORD,
+        stack: error?.stack
+      });
+      logger.error('⚠️  All database operations (savePlayer, saveGame, getLeaderboard) will be DISABLED');
       throw error;
     }
   }
 
+  isInitialized(): boolean {
+    return this._isInitialized;
+  }
+
   async savePlayer(playerId: string, username: string): Promise<string> {
-    if (!this.isInitialized) {
-      logger.warn('Database not initialized, skipping savePlayer', { playerId, username });
+    if (!this._isInitialized) {
+      logger.warn('⚠️  SKIPPING savePlayer - Database not initialized', { 
+        playerId, 
+        username,
+        host: process.env.DB_HOST || 'NOT SET',
+        database: process.env.DB_NAME || 'NOT SET'
+      });
       return playerId;
     }
+
+    logger.debug('💾 Attempting to save player to database', { playerId, username });
 
     const checkQuery = `SELECT id FROM players WHERE username = $1`;
     const insertQuery = `
@@ -131,7 +178,7 @@ export class DatabaseService {
         }
       }
       
-      logger.info('Player saved to database', { playerId: savedId, username });
+      logger.info('✅ Player saved to database successfully', { playerId: savedId, username });
       return savedId;
     } catch (error: any) {
       if (error.code === '23505') {
@@ -152,10 +199,25 @@ export class DatabaseService {
   }
 
   async saveGame(game: Game): Promise<void> {
-    if (!this.isInitialized) {
-      logger.warn('Database not initialized, skipping saveGame', { gameId: game.id });
+    if (!this._isInitialized) {
+      logger.warn('⚠️  SKIPPING saveGame - Database not initialized', { 
+        gameId: game.id,
+        host: process.env.DB_HOST || 'NOT SET',
+        database: process.env.DB_NAME || 'NOT SET',
+        status: game.getStatus(),
+        player1: game.player1.username,
+        player2: game.player2.username,
+        winner: game.getWinner()?.username || 'none'
+      });
       return;
     }
+
+    logger.debug('💾 Attempting to save game to database', { 
+      gameId: game.id,
+      status: game.getStatus(),
+      player1: game.player1.username,
+      player2: game.player2.username
+    });
 
     let client;
     try {
@@ -247,19 +309,21 @@ export class DatabaseService {
       }
 
       await client.query('COMMIT');
-      logger.info('Game saved successfully', { 
+      logger.info('✅ Game saved to database successfully', { 
         gameId: game.id, 
         winnerId: finalWinnerId, 
         winner: winner?.username || null,
         player1Id: dbPlayer1Id,
-        player2Id: dbPlayer2Id
+        player2Id: dbPlayer2Id,
+        status: game.getStatus()
       });
     } catch (error: any) {
-      await client.query('ROLLBACK');
-      logger.error('Failed to save game', { 
+      await client.query('ROLLBACK').catch(() => {});
+      logger.error('❌ Failed to save game to database', { 
         error: error?.message || error,
         code: error?.code,
         gameId: game.id,
+        status: game.getStatus(),
         stack: error?.stack
       });
     } finally {
@@ -300,8 +364,11 @@ export class DatabaseService {
   }
 
   async getLeaderboard(limit: number = 10): Promise<LeaderboardEntry[]> {
-    if (!this.isInitialized) {
-      logger.warn('Database not initialized, returning empty leaderboard');
+    if (!this._isInitialized) {
+      logger.warn('Database not initialized, returning empty leaderboard', {
+        host: process.env.DB_HOST,
+        database: process.env.DB_NAME
+      });
       return [];
     }
 

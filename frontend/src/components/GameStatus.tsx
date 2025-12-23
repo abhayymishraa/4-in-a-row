@@ -1,11 +1,10 @@
-import React from 'react';
 
 interface GameStatusProps {
   game: any;
   currentUsername: string;
 }
 
-const GameStatus: React.FC<GameStatusProps> = ({ game, currentUsername }) => {
+const GameStatus = ({ game, currentUsername }: GameStatusProps) => {
   if (!game) return null;
 
   const isCurrentPlayerTurn = game.currentPlayer.username === currentUsername;

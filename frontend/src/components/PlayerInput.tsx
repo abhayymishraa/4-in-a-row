@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 interface PlayerInputProps {
   onCreateGame: (username: string) => void;
   onJoinGame: (username: string, gameId: string) => void;
 }
 
-const PlayerInput: React.FC<PlayerInputProps> = ({ onCreateGame, onJoinGame }) => {
+const PlayerInput = ({ onCreateGame, onJoinGame }: PlayerInputProps) => {
   const [username, setUsername] = useState<string>('');
   const [gameId, setGameId] = useState<string>('');
 
-  const handleCreateGame = (e: React.FormEvent) => {
+  const handleCreateGame = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (username.trim()) {
       localStorage.setItem('username', username.trim());
@@ -17,7 +17,7 @@ const PlayerInput: React.FC<PlayerInputProps> = ({ onCreateGame, onJoinGame }) =
     }
   };
 
-  const handleJoinGame = (e: React.FormEvent) => {
+  const handleJoinGame = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (username.trim() && gameId.trim()) {
       localStorage.setItem('username', username.trim());

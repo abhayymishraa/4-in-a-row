@@ -45,12 +45,32 @@ app.use('/api', createRoutes(databaseService));
 
 async function startServer() {
   try {
-    await databaseService.initialize().catch((error) => {
-      logger.warn('Database initialization failed, but server will continue without persistence', { 
-        error: error?.message || error,
-        code: error?.code 
-      });
+    logger.info('Starting server initialization...', {
+      hasDbHost: !!process.env.DB_HOST,
+      hasDbName: !!process.env.DB_NAME,
+      hasDbUser: !!process.env.DB_USER,
+      hasDbPassword: !!process.env.DB_PASSWORD,
+      dbHost: process.env.DB_HOST || 'NOT SET',
+      dbName: process.env.DB_NAME || 'NOT SET',
+      dbUser: process.env.DB_USER || 'NOT SET'
     });
+
+    try {
+      logger.info('Attempting to initialize database...');
+      await databaseService.initialize();
+      logger.info('✅ Database initialized successfully - database operations are ENABLED');
+    } catch (error: any) {
+      logger.error('❌ Database initialization FAILED - database operations will be DISABLED', { 
+        error: error?.message || error,
+        code: error?.code,
+        host: process.env.DB_HOST || 'NOT SET',
+        database: process.env.DB_NAME || 'NOT SET',
+        user: process.env.DB_USER || 'NOT SET',
+        port: process.env.DB_PORT || 'NOT SET',
+        stack: error?.stack
+      });
+      logger.error('⚠️  All database save operations (savePlayer, saveGame) will be skipped until database is initialized');
+    }
 
     await kafkaProducer.connect().catch((error) => {
       logger.warn('Kafka connection failed, but server will continue without analytics', { error });
@@ -58,7 +78,11 @@ async function startServer() {
 
     const port = process.env.PORT || 3000;
     httpServer.listen(port, () => {
-      logger.info(`Server started on port ${port}`);
+      logger.info(`Server started on port ${port}`, {
+        dbHost: process.env.DB_HOST || 'not set',
+        dbName: process.env.DB_NAME || 'not set',
+        dbUser: process.env.DB_USER || 'not set'
+      });
     });
 
     setInterval(() => {

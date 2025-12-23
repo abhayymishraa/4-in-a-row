@@ -1,4 +1,3 @@
-import React from 'react';
 import { useGameEngine } from '../hooks/useGameEngine';
 
 interface GameBoardProps {
@@ -7,7 +6,7 @@ interface GameBoardProps {
   currentUsername: string;
 }
 
-const GameBoard: React.FC<GameBoardProps> = ({ game, onMakeMove, currentUsername }) => {
+const GameBoard = ({ game, onMakeMove, currentUsername }: GameBoardProps) => {
   const { validateMove } = useGameEngine(game);
 
   if (!game || !game.board) return null;

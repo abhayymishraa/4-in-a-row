@@ -1,4 +1,3 @@
-import React from 'react';
 
 interface LeaderboardProps {
   leaderboard: Array<{
@@ -10,7 +9,7 @@ interface LeaderboardProps {
   onRefresh?: () => void;
 }
 
-const Leaderboard: React.FC<LeaderboardProps> = ({ leaderboard, onRefresh }) => {
+const Leaderboard = ({ leaderboard, onRefresh }: LeaderboardProps) => {
   return (
     <div className="bg-white p-5 rounded-lg border border-gray-300 shadow-sm h-fit sticky top-5">
       <div className="flex items-center justify-between mb-4">

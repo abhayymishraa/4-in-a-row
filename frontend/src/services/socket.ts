@@ -20,23 +20,20 @@ export function useSocket() {
         reconnectionAttempts: Infinity
       });
 
-      globalSocket.on('connect', () => {
-        console.log('Socket connected');
-        setConnected(true);
-      });
+          globalSocket.on('connect', () => {
+            setConnected(true);
+          });
 
-      globalSocket.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', reason);
-        setConnected(false);
-        if (reason === 'io server disconnect') {
-          globalSocket?.connect();
-        }
-      });
+          globalSocket.on('disconnect', (reason) => {
+            setConnected(false);
+            if (reason === 'io server disconnect') {
+              globalSocket?.connect();
+            }
+          });
 
-      globalSocket.on('reconnect', (attemptNumber) => {
-        console.log('Socket reconnected after', attemptNumber, 'attempts');
-        setConnected(true);
-      });
+          globalSocket.on('reconnect', () => {
+            setConnected(true);
+          });
     }
 
     const currentSocket = globalSocket;
@@ -44,14 +41,12 @@ export function useSocket() {
       setSocket(currentSocket);
       setConnected(currentSocket.connected);
 
-      const handleConnect = () => {
-        console.log('Socket connected (handler)');
-        setConnected(true);
-      };
-      const handleDisconnect = () => {
-        console.log('Socket disconnected (handler)');
-        setConnected(false);
-      };
+          const handleConnect = () => {
+            setConnected(true);
+          };
+          const handleDisconnect = () => {
+            setConnected(false);
+          };
 
       currentSocket.on('connect', handleConnect);
       currentSocket.on('disconnect', handleDisconnect);

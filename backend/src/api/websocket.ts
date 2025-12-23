@@ -650,8 +650,11 @@ export class WebSocketHandler {
     });
 
     try {
-      await this.databaseService.saveGame(game).catch((error) => {
-        logger.warn('Failed to save game to database, but continuing', { error: error?.message, gameId: game.id });
+      await this.databaseService.saveGame(game);
+      logger.info('Game saved to database successfully', { 
+        gameId: game.id, 
+        status: gameStatus,
+        winner: winnerData?.username || null
       });
 
       await this.kafkaProducer.emitGameCompleted(
@@ -778,7 +781,16 @@ export class WebSocketHandler {
   private async handleGameForfeit(game: any, forfeitingPlayerId: string): Promise<void> {
     const winner = game.player1.id === forfeitingPlayerId ? game.player2 : game.player1;
     
-    await this.databaseService.saveGame(game);
+    try {
+      await this.databaseService.saveGame(game);
+      logger.info('Forfeited game saved to database', { gameId: game.id, winnerId: winner.id });
+    } catch (error: any) {
+      logger.error('Failed to save forfeited game to database', { 
+        error: error?.message || error,
+        gameId: game.id 
+      });
+    }
+    
     await this.kafkaProducer.emitGameCompleted(game.id, winner.id, 'won');
 
     this.io.to(game.id).emit('game-over', {

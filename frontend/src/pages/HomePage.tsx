@@ -23,26 +23,22 @@ function HomePage() {
     }
 
     const handleGameCreated = (data: { gameId: string; game: any; botJoinTime: number }) => {
-      console.log('Game created:', data.gameId);
       localStorage.setItem('gameId', data.gameId);
       localStorage.setItem('isGameCreator', 'true');
       navigate(`/game/${data.gameId}`);
     };
 
     const handleGameUpdate = (gameData: any) => {
-      console.log('Game update:', gameData.id);
       navigate(`/game/${gameData.id}`);
     };
 
     const handleUsernameTaken = (data: { requestedUsername: string; assignedUsername: string; message: string }) => {
-      console.warn('Username taken:', data.message);
       localStorage.setItem('username', data.assignedUsername);
       setError(data.message);
       setTimeout(() => setError(''), 5000);
     };
 
     const handleError = (data: { message: string }) => {
-      console.error('Socket error:', data.message);
       if (!data.message.includes('not connected')) {
         setError(data.message || 'An error occurred. Please try again.');
       }
@@ -58,12 +54,7 @@ function HomePage() {
     });
 
     socket.on('connect', () => {
-      console.log('Socket connected');
       setError('');
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected - will reconnect automatically');
     });
 
     return () => {
@@ -73,7 +64,6 @@ function HomePage() {
       socket.off('error', handleError);
       socket.off('game-over');
       socket.off('connect');
-      socket.off('disconnect');
     };
   }, [socket, navigate]);
 
@@ -82,7 +72,7 @@ function HomePage() {
     
     const interval = setInterval(() => {
       fetchLeaderboard();
-    }, 5000);
+    }, 30000);
     
     return () => clearInterval(interval);
   }, []);
@@ -122,7 +112,6 @@ function HomePage() {
     }
 
     setError('');
-    console.log('Creating game with username:', username);
     socket.emit('create-game', { username: username.trim() });
   };
 
@@ -148,7 +137,6 @@ function HomePage() {
     }
 
     setError('');
-    console.log('Joining game:', gameId, 'with username:', username);
     socket.emit('join-game', { username: username.trim(), gameId: gameId.trim() });
   };
 

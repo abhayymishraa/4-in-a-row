@@ -121,7 +121,22 @@ export class DatabaseService {
       logger.info('📋 Loading and executing database schema...');
       const fs = require('fs');
       const path = require('path');
-      const schemaPath = path.join(__dirname, '../models/schema.sql');
+      
+      // Resolve schema path - try dist first (production), then src (development)
+      let schemaPath = path.join(__dirname, '../models/schema.sql');
+      if (!fs.existsSync(schemaPath)) {
+        // If not in dist, try going back to src directory
+        schemaPath = path.join(__dirname, '../../src/models/schema.sql');
+      }
+      if (!fs.existsSync(schemaPath)) {
+        // Last resort: try from project root
+        schemaPath = path.join(process.cwd(), 'src/models/schema.sql');
+      }
+      
+      if (!fs.existsSync(schemaPath)) {
+        throw new Error(`Schema file not found. Tried: ${schemaPath}`);
+      }
+      
       const schema = fs.readFileSync(schemaPath, 'utf8');
       
       logger.debug('Executing schema SQL...');

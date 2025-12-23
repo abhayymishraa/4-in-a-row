@@ -61,8 +61,12 @@ export class DatabaseService {
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 30000,
       ssl: sslConfig,
+      // Note: The 'family' property is not part of the official PoolConfig type for 'pg'
+      // and may cause type errors with strict TypeScript settings.
+      // If you experience type errors, consider removing or properly extending the type.
+      // family: 4, // Uncomment if you specifically need to force IPv4 and are handling types
     });
-
+    
     this.pool.on('error', (err: any) => {
       logger.error('Unexpected error on idle database client', { 
         error: err.message,
@@ -82,7 +86,29 @@ export class DatabaseService {
       return;
     }
     try {
-      await this.pool.query('SELECT 1');
+      // Test connection with retry logic for network issues
+      let connectionTestPassed = false;
+      const maxRetries = 3;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          await this.pool.query('SELECT 1');
+          connectionTestPassed = true;
+          break;
+        } catch (error: any) {
+          if (attempt === maxRetries) {
+            throw error;
+          }
+          logger.warn(`Database connection test attempt ${attempt}/${maxRetries} failed, retrying...`, {
+            error: error?.message,
+            code: error?.code
+          });
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+        }
+      }
+      
+      if (!connectionTestPassed) {
+        throw new Error('Database connection test failed after retries');
+      }
       logger.info('Database connection test successful', { 
         host: process.env.DB_HOST,
         database: process.env.DB_NAME 

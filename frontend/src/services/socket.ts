@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { getApiUrl } from '../config/api';
+import { useEffect, useState } from "react";
+import { io, Socket } from "socket.io-client";
+import { getApiUrl } from "../config/api";
 
 const SOCKET_URL: string = getApiUrl();
 
@@ -13,27 +13,27 @@ export function useSocket() {
   useEffect(() => {
     if (!globalSocket) {
       globalSocket = io(SOCKET_URL, {
-        transports: ['websocket', 'polling'],
+        transports: ["websocket", "polling"],
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-        reconnectionAttempts: Infinity
+        reconnectionAttempts: Infinity,
       });
 
-          globalSocket.on('connect', () => {
-            setConnected(true);
-          });
+      globalSocket.on("connect", () => {
+        setConnected(true);
+      });
 
-          globalSocket.on('disconnect', (reason) => {
-            setConnected(false);
-            if (reason === 'io server disconnect') {
-              globalSocket?.connect();
-            }
-          });
+      globalSocket.on("disconnect", (reason) => {
+        setConnected(false);
+        if (reason === "io server disconnect") {
+          globalSocket?.connect();
+        }
+      });
 
-          globalSocket.on('reconnect', () => {
-            setConnected(true);
-          });
+      globalSocket.on("reconnect", () => {
+        setConnected(true);
+      });
     }
 
     const currentSocket = globalSocket;
@@ -41,23 +41,22 @@ export function useSocket() {
       setSocket(currentSocket);
       setConnected(currentSocket.connected);
 
-          const handleConnect = () => {
-            setConnected(true);
-          };
-          const handleDisconnect = () => {
-            setConnected(false);
-          };
+      const handleConnect = () => {
+        setConnected(true);
+      };
+      const handleDisconnect = () => {
+        setConnected(false);
+      };
 
-      currentSocket.on('connect', handleConnect);
-      currentSocket.on('disconnect', handleDisconnect);
+      currentSocket.on("connect", handleConnect);
+      currentSocket.on("disconnect", handleDisconnect);
 
       return () => {
-        currentSocket.off('connect', handleConnect);
-        currentSocket.off('disconnect', handleDisconnect);
+        currentSocket.off("connect", handleConnect);
+        currentSocket.off("disconnect", handleDisconnect);
       };
     }
   }, []);
 
   return { socket, connected };
 }
-

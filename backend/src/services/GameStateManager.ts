@@ -1,6 +1,6 @@
-import { Game } from '../core/Game';
-import { Player } from '../core/Player';
-import { logger } from '../config/logger';
+import { Game } from "../core/Game";
+import { Player } from "../core/Player";
+import { logger } from "../config/logger";
 
 export class GameStateManager {
   private games: Map<string, Game>;
@@ -16,8 +16,12 @@ export class GameStateManager {
     this.games.set(gameId, game);
     this.playerGameMap.set(player1.id, gameId);
     this.playerGameMap.set(player2.id, gameId);
-    
-    logger.info('Game created', { gameId, player1Id: player1.id, player2Id: player2.id });
+
+    logger.info("Game created", {
+      gameId,
+      player1Id: player1.id,
+      player2Id: player2.id,
+    });
     return game;
   }
 
@@ -27,7 +31,7 @@ export class GameStateManager {
 
   updateGame(gameId: string, game: Game): void {
     this.games.set(gameId, game);
-    logger.debug('Game updated', { gameId });
+    logger.debug("Game updated", { gameId });
   }
 
   removeGame(gameId: string): void {
@@ -36,7 +40,7 @@ export class GameStateManager {
       this.playerGameMap.delete(game.player1.id);
       this.playerGameMap.delete(game.player2.id);
       this.games.delete(gameId);
-      logger.info('Game removed', { gameId });
+      logger.info("Game removed", { gameId });
     }
   }
 
@@ -57,16 +61,16 @@ export class GameStateManager {
     const staleGames: string[] = [];
 
     for (const [gameId, game] of this.games.entries()) {
-      const ageMinutes = (now.getTime() - game.lastMoveAt.getTime()) / (1000 * 60);
-      if (ageMinutes > maxAgeMinutes && game.getStatus() === 'playing') {
+      const ageMinutes =
+        (now.getTime() - game.lastMoveAt.getTime()) / (1000 * 60);
+      if (ageMinutes > maxAgeMinutes && game.getStatus() === "playing") {
         staleGames.push(gameId);
       }
     }
 
     for (const gameId of staleGames) {
       this.removeGame(gameId);
-      logger.info('Stale game cleaned up', { gameId });
+      logger.info("Stale game cleaned up", { gameId });
     }
   }
 }
-

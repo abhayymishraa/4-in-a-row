@@ -1,6 +1,6 @@
-import { GameEngine } from '../core/GameEngine';
-import { Board } from '../core/Board';
-import { logger } from '../config/logger';
+import { GameEngine } from "../core/GameEngine";
+import { Board } from "../core/Board";
+import { logger } from "../config/logger";
 
 interface MoveScore {
   column: number;
@@ -24,41 +24,45 @@ export class BotService {
     const availableColumns = board.getAvailableColumns();
 
     if (availableColumns.length === 0) {
-      throw new Error('No available moves');
+      throw new Error("No available moves");
     }
 
-    // Priority 1: Check for immediate winning move
     const winningMove = this.findWinningMove(engine, this.botPlayerNumber);
     if (winningMove !== -1) {
-      logger.debug('Bot found winning move', { column: winningMove });
+      logger.debug("Bot found winning move", { column: winningMove });
       return winningMove;
     }
 
-    // Priority 2: Block opponent's winning move
     const blockingMove = this.findWinningMove(engine, this.opponentNumber);
     if (blockingMove !== -1) {
-      logger.debug('Bot blocking opponent win', { column: blockingMove });
+      logger.debug("Bot blocking opponent win", { column: blockingMove });
       return blockingMove;
     }
 
-    // Priority 3: Check for trap moves (two ways to win)
     const trapMove = this.findTrapMove(engine);
     if (trapMove !== -1) {
-      logger.debug('Bot creating trap', { column: trapMove });
+      logger.debug("Bot creating trap", { column: trapMove });
       return trapMove;
     }
 
-    // Priority 4: Block opponent's trap
     const blockTrapMove = this.findOpponentTrap(engine);
     if (blockTrapMove !== -1) {
-      logger.debug('Bot blocking opponent trap', { column: blockTrapMove });
+      logger.debug("Bot blocking opponent trap", { column: blockTrapMove });
       return blockTrapMove;
     }
 
-    // Priority 5: Use minimax with alpha-beta pruning
-    const bestMove = this.minimax(engine, this.MAX_DEPTH, true, -Infinity, Infinity);
-    logger.debug('Bot using minimax result', { column: bestMove.column, score: bestMove.score });
-    
+    const bestMove = this.minimax(
+      engine,
+      this.MAX_DEPTH,
+      true,
+      -Infinity,
+      Infinity,
+    );
+    logger.debug("Bot using minimax result", {
+      column: bestMove.column,
+      score: bestMove.score,
+    });
+
     return bestMove.column;
   }
 
@@ -71,9 +75,9 @@ export class BotService {
       try {
         const currentPlayer = testEngine.getCurrentPlayer();
         if (currentPlayer !== player) continue;
-        
+
         const result = testEngine.makeMove(col);
-        if (result.status === 'won' && result.winner === player) {
+        if (result.status === "won" && result.winner === player) {
           return col;
         }
       } catch {
@@ -91,25 +95,26 @@ export class BotService {
       const testEngine = engine.clone();
       try {
         testEngine.makeMove(col);
-        
-        // Count how many winning threats bot creates after this move
+
         let winningThreats = 0;
         const testBoard = testEngine.getBoard();
         const nextAvailable = testBoard.getAvailableColumns();
-        
+
         for (const nextCol of nextAvailable) {
           const nextEngine = new GameEngine(testBoard, this.botPlayerNumber);
           try {
             const result = nextEngine.makeMove(nextCol);
-            if (result.status === 'won' && result.winner === this.botPlayerNumber) {
+            if (
+              result.status === "won" &&
+              result.winner === this.botPlayerNumber
+            ) {
               winningThreats++;
             }
           } catch {
             continue;
           }
         }
-        
-        // If we can create 2+ winning threats, it's a trap
+
         if (winningThreats >= 2) {
           return col;
         }
@@ -124,33 +129,31 @@ export class BotService {
     const board = engine.getBoard();
     const availableColumns = board.getAvailableColumns();
 
-    // Simulate opponent making each move and check if they create a trap
     for (const col of this.getColumnOrder(availableColumns)) {
-      // Create a scenario where opponent plays this column
       const opponentEngine = new GameEngine(board, this.opponentNumber);
       try {
         opponentEngine.makeMove(col);
-        
-        // Count opponent's winning threats after this move
+
         let opponentThreats = 0;
         const testBoard = opponentEngine.getBoard();
         const nextAvailable = testBoard.getAvailableColumns();
-        
+
         for (const nextCol of nextAvailable) {
           const nextEngine = new GameEngine(testBoard, this.opponentNumber);
           try {
             const result = nextEngine.makeMove(nextCol);
-            if (result.status === 'won' && result.winner === this.opponentNumber) {
+            if (
+              result.status === "won" &&
+              result.winner === this.opponentNumber
+            ) {
               opponentThreats++;
             }
           } catch {
             continue;
           }
         }
-        
-        // If opponent would create a trap, we should play here first
+
         if (opponentThreats >= 2) {
-          // Verify we can actually play this column
           if (board.isValidMove(col)) {
             return col;
           }
@@ -167,19 +170,17 @@ export class BotService {
     depth: number,
     isMaximizing: boolean,
     alpha: number,
-    beta: number
+    beta: number,
   ): MoveScore {
     const board = engine.getBoard();
     const availableColumns = board.getAvailableColumns();
 
-    // Terminal conditions
     if (depth === 0 || availableColumns.length === 0) {
       return { column: -1, score: this.evaluateBoard(board) };
     }
 
-    // Check for game end
     const status = engine.getGameStatus();
-    if (status === 'won') {
+    if (status === "won") {
       const winner = engine.getWinner();
       if (winner === this.botPlayerNumber) {
         return { column: -1, score: this.WIN_SCORE + depth };
@@ -187,7 +188,7 @@ export class BotService {
         return { column: -1, score: this.LOSE_SCORE - depth };
       }
     }
-    if (status === 'draw') {
+    if (status === "draw") {
       return { column: -1, score: 0 };
     }
 
@@ -201,16 +202,22 @@ export class BotService {
         const testEngine = engine.clone();
         try {
           testEngine.makeMove(col);
-          const result = this.minimax(testEngine, depth - 1, false, alpha, beta);
-          
+          const result = this.minimax(
+            testEngine,
+            depth - 1,
+            false,
+            alpha,
+            beta,
+          );
+
           if (result.score > bestScore) {
             bestScore = result.score;
             bestColumn = col;
           }
-          
+
           alpha = Math.max(alpha, bestScore);
           if (beta <= alpha) {
-            break; // Beta cutoff
+            break;
           }
         } catch {
           continue;
@@ -227,15 +234,15 @@ export class BotService {
         try {
           testEngine.makeMove(col);
           const result = this.minimax(testEngine, depth - 1, true, alpha, beta);
-          
+
           if (result.score < bestScore) {
             bestScore = result.score;
             bestColumn = col;
           }
-          
+
           beta = Math.min(beta, bestScore);
           if (beta <= alpha) {
-            break; // Alpha cutoff
+            break;
           }
         } catch {
           continue;
@@ -249,44 +256,58 @@ export class BotService {
   private evaluateBoard(board: Board): number {
     let score = 0;
 
-    // Evaluate all possible 4-in-a-row windows
     const rows = Board.getRows();
     const cols = Board.getCols();
     const grid = board.getBoard();
 
-    // Horizontal windows
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col <= cols - 4; col++) {
-        const window = [grid[row][col], grid[row][col + 1], grid[row][col + 2], grid[row][col + 3]];
+        const window = [
+          grid[row][col],
+          grid[row][col + 1],
+          grid[row][col + 2],
+          grid[row][col + 3],
+        ];
         score += this.evaluateWindow(window);
       }
     }
 
-    // Vertical windows
     for (let row = 0; row <= rows - 4; row++) {
       for (let col = 0; col < cols; col++) {
-        const window = [grid[row][col], grid[row + 1][col], grid[row + 2][col], grid[row + 3][col]];
+        const window = [
+          grid[row][col],
+          grid[row + 1][col],
+          grid[row + 2][col],
+          grid[row + 3][col],
+        ];
         score += this.evaluateWindow(window);
       }
     }
 
-    // Diagonal (positive slope) windows
     for (let row = 3; row < rows; row++) {
       for (let col = 0; col <= cols - 4; col++) {
-        const window = [grid[row][col], grid[row - 1][col + 1], grid[row - 2][col + 2], grid[row - 3][col + 3]];
+        const window = [
+          grid[row][col],
+          grid[row - 1][col + 1],
+          grid[row - 2][col + 2],
+          grid[row - 3][col + 3],
+        ];
         score += this.evaluateWindow(window);
       }
     }
 
-    // Diagonal (negative slope) windows
     for (let row = 0; row <= rows - 4; row++) {
       for (let col = 0; col <= cols - 4; col++) {
-        const window = [grid[row][col], grid[row + 1][col + 1], grid[row + 2][col + 2], grid[row + 3][col + 3]];
+        const window = [
+          grid[row][col],
+          grid[row + 1][col + 1],
+          grid[row + 2][col + 2],
+          grid[row + 3][col + 3],
+        ];
         score += this.evaluateWindow(window);
       }
     }
 
-    // Center column preference
     const centerCol = Math.floor(cols / 2);
     let centerCount = 0;
     for (let row = 0; row < rows; row++) {
@@ -300,16 +321,18 @@ export class BotService {
   }
 
   private evaluateWindow(window: number[]): number {
-    const botCount = window.filter(cell => cell === this.botPlayerNumber).length;
-    const opponentCount = window.filter(cell => cell === this.opponentNumber).length;
-    const emptyCount = window.filter(cell => cell === 0).length;
+    const botCount = window.filter(
+      (cell) => cell === this.botPlayerNumber,
+    ).length;
+    const opponentCount = window.filter(
+      (cell) => cell === this.opponentNumber,
+    ).length;
+    const emptyCount = window.filter((cell) => cell === 0).length;
 
-    // If window has both players' pieces, it's useless
     if (botCount > 0 && opponentCount > 0) {
       return 0;
     }
 
-    // Score based on bot's pieces
     if (botCount === 4) {
       return 1000;
     } else if (botCount === 3 && emptyCount === 1) {
@@ -320,11 +343,10 @@ export class BotService {
       return 1;
     }
 
-    // Negative score for opponent's pieces
     if (opponentCount === 4) {
       return -1000;
     } else if (opponentCount === 3 && emptyCount === 1) {
-      return -80; // Opponent's 3-in-a-row is more dangerous
+      return -80;
     } else if (opponentCount === 2 && emptyCount === 2) {
       return -15;
     } else if (opponentCount === 1 && emptyCount === 3) {
@@ -335,9 +357,8 @@ export class BotService {
   }
 
   private getColumnOrder(availableColumns: number[]): number[] {
-    // Prefer center columns (better strategic positions)
     const centerCol = Math.floor(Board.getCols() / 2);
-    
+
     return [...availableColumns].sort((a, b) => {
       const distA = Math.abs(a - centerCol);
       const distB = Math.abs(b - centerCol);

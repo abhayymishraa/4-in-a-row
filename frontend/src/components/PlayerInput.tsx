@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 interface PlayerInputProps {
   onCreateGame: (username: string) => void;
@@ -6,13 +6,13 @@ interface PlayerInputProps {
 }
 
 const PlayerInput = ({ onCreateGame, onJoinGame }: PlayerInputProps) => {
-  const [username, setUsername] = useState<string>('');
-  const [gameId, setGameId] = useState<string>('');
+  const [username, setUsername] = useState<string>("");
+  const [gameId, setGameId] = useState<string>("");
 
   const handleCreateGame = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (username.trim()) {
-      localStorage.setItem('username', username.trim());
+      localStorage.setItem("username", username.trim());
       onCreateGame(username.trim());
     }
   };
@@ -20,8 +20,8 @@ const PlayerInput = ({ onCreateGame, onJoinGame }: PlayerInputProps) => {
   const handleJoinGame = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (username.trim() && gameId.trim()) {
-      localStorage.setItem('username', username.trim());
-      localStorage.setItem('gameId', gameId.trim());
+      localStorage.setItem("username", username.trim());
+      localStorage.setItem("gameId", gameId.trim());
       onJoinGame(username.trim(), gameId.trim());
     }
   };
@@ -30,7 +30,10 @@ const PlayerInput = ({ onCreateGame, onJoinGame }: PlayerInputProps) => {
     <div className="mt-5">
       <form onSubmit={handleCreateGame}>
         <div className="mb-4">
-          <label htmlFor="username" className="block mb-2 font-semibold text-gray-700">
+          <label
+            htmlFor="username"
+            className="block mb-2 font-semibold text-gray-700"
+          >
             Username (Required):
           </label>
           <input
@@ -43,9 +46,12 @@ const PlayerInput = ({ onCreateGame, onJoinGame }: PlayerInputProps) => {
             className="w-full max-w-md px-3 py-2 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        
+
         <div className="mb-4">
-          <label htmlFor="gameId" className="block mb-2 font-semibold text-gray-700">
+          <label
+            htmlFor="gameId"
+            className="block mb-2 font-semibold text-gray-700"
+          >
             Game ID (Optional - for joining existing game):
           </label>
           <input
@@ -65,15 +71,15 @@ const PlayerInput = ({ onCreateGame, onJoinGame }: PlayerInputProps) => {
           >
             Create Game
           </button>
-          
+
           <button
             type="button"
             onClick={handleJoinGame}
             disabled={!username.trim() || !gameId.trim()}
             className={`px-5 py-2 text-base font-semibold text-white rounded-lg transition-colors ${
-              gameId.trim() 
-                ? 'bg-blue-500 hover:bg-blue-600 cursor-pointer' 
-                : 'bg-gray-400 cursor-not-allowed opacity-60'
+              gameId.trim()
+                ? "bg-blue-500 hover:bg-blue-600 cursor-pointer"
+                : "bg-gray-400 cursor-not-allowed opacity-60"
             }`}
           >
             Join Game

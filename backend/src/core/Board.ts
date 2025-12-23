@@ -7,7 +7,7 @@ export class Board {
 
   constructor(grid?: CellValue[][]) {
     if (grid) {
-      this.grid = grid.map(row => [...row]);
+      this.grid = grid.map((row) => [...row]);
     } else {
       this.grid = Array(Board.ROWS)
         .fill(null)
@@ -24,7 +24,7 @@ export class Board {
   }
 
   getBoard(): CellValue[][] {
-    return this.grid.map(row => [...row]);
+    return this.grid.map((row) => [...row]);
   }
 
   isValidMove(column: number): boolean {
@@ -36,10 +36,12 @@ export class Board {
 
   placeDisc(column: number, player: number): Board {
     if (!this.isValidMove(column)) {
-      throw new Error(`Invalid move: column ${column} is full or out of bounds`);
+      throw new Error(
+        `Invalid move: column ${column} is full or out of bounds`,
+      );
     }
 
-    const newGrid = this.grid.map(row => [...row]);
+    const newGrid = this.grid.map((row) => [...row]);
     let row = Board.ROWS - 1;
 
     while (row >= 0 && newGrid[row][column] !== 0) {
@@ -80,4 +82,3 @@ export class Board {
     return available;
   }
 }
-

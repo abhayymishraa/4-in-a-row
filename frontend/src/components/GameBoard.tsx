@@ -1,4 +1,4 @@
-import { useGameEngine } from '../hooks/useGameEngine';
+import { useGameEngine } from "../hooks/useGameEngine";
 
 interface GameBoardProps {
   game: any;
@@ -13,7 +13,7 @@ const GameBoard = ({ game, onMakeMove, currentUsername }: GameBoardProps) => {
 
   const board = game.board;
   const isCurrentPlayerTurn = game.currentPlayer.username === currentUsername;
-  const isGameOver = game.status === 'won' || game.status === 'draw';
+  const isGameOver = game.status === "won" || game.status === "draw";
 
   const handleColumnClick = (column: number) => {
     if (isGameOver) {
@@ -32,9 +32,9 @@ const GameBoard = ({ game, onMakeMove, currentUsername }: GameBoardProps) => {
   };
 
   const getCellColor = (cell: number): string => {
-    if (cell === 0) return 'bg-gray-300';
-    if (cell === 1) return 'bg-red-500';
-    return 'bg-blue-500';
+    if (cell === 0) return "bg-gray-300";
+    if (cell === 1) return "bg-red-500";
+    return "bg-blue-500";
   };
 
   return (
@@ -50,8 +50,8 @@ const GameBoard = ({ game, onMakeMove, currentUsername }: GameBoardProps) => {
             disabled={isGameOver || !isCurrentPlayerTurn}
             className={`w-[50px] h-10 p-0 text-base font-bold text-white rounded border-none transition-colors ${
               isGameOver || !isCurrentPlayerTurn
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-green-500 hover:bg-green-600 cursor-pointer'
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-500 hover:bg-green-600 cursor-pointer"
             }`}
           >
             {col + 1}
@@ -68,7 +68,7 @@ const GameBoard = ({ game, onMakeMove, currentUsername }: GameBoardProps) => {
               key={`${rowIndex}-${colIndex}`}
               className={`w-[50px] h-[50px] rounded-full border-2 border-gray-800 flex items-center justify-center ${getCellColor(cell)}`}
             />
-          ))
+          )),
         )}
       </div>
     </div>

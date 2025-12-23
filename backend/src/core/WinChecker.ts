@@ -1,16 +1,26 @@
-import { Board } from './Board';
+import { Board } from "./Board";
 
 export class WinChecker {
   private static readonly WIN_LENGTH = 4;
   private static readonly DIRECTIONS = [
-    { deltaRow: 0, deltaCol: 1 },   // Horizontal
-    { deltaRow: 1, deltaCol: 0 },   // Vertical
-    { deltaRow: 1, deltaCol: 1 },   // Diagonal (top-left to bottom-right)
-    { deltaRow: 1, deltaCol: -1 }  // Diagonal (top-right to bottom-left)
+    { deltaRow: 0, deltaCol: 1 },
+    { deltaRow: 1, deltaCol: 0 },
+    { deltaRow: 1, deltaCol: 1 },
+    { deltaRow: 1, deltaCol: -1 },
   ];
 
-  static checkWin(row: number, col: number, player: number, board: Board): boolean {
-    if (row < 0 || row >= Board.getRows() || col < 0 || col >= Board.getCols()) {
+  static checkWin(
+    row: number,
+    col: number,
+    player: number,
+    board: Board,
+  ): boolean {
+    if (
+      row < 0 ||
+      row >= Board.getRows() ||
+      col < 0 ||
+      col >= Board.getCols()
+    ) {
       return false;
     }
 
@@ -20,7 +30,14 @@ export class WinChecker {
     }
 
     for (const direction of WinChecker.DIRECTIONS) {
-      const count = WinChecker.countInDirection(row, col, player, direction.deltaRow, direction.deltaCol, board);
+      const count = WinChecker.countInDirection(
+        row,
+        col,
+        player,
+        direction.deltaRow,
+        direction.deltaCol,
+        board,
+      );
       if (count >= WinChecker.WIN_LENGTH) {
         return true;
       }
@@ -35,7 +52,7 @@ export class WinChecker {
     player: number,
     deltaRow: number,
     deltaCol: number,
-    board: Board
+    board: Board,
   ): number {
     let count = 1;
 
@@ -76,7 +93,6 @@ export class WinChecker {
     return count;
   }
 
-
   static findWinner(board: Board): number | null {
     for (let row = 0; row < Board.getRows(); row++) {
       for (let col = 0; col < Board.getCols(); col++) {
@@ -91,4 +107,3 @@ export class WinChecker {
     return null;
   }
 }
-

@@ -1,6 +1,6 @@
-import { useMemo, useCallback } from 'react';
-import { GameEngine } from '../core/GameEngine';
-import { Board } from '../core/Board';
+import { useMemo, useCallback } from "react";
+import { GameEngine } from "../core/GameEngine";
+import { Board } from "../core/Board";
 
 export function useGameEngine(gameData: any) {
   const engine = useMemo(() => {
@@ -11,12 +11,14 @@ export function useGameEngine(gameData: any) {
     return new GameEngine();
   }, [gameData]);
 
-  const validateMove = useCallback((column: number): boolean => {
-    return engine.validateMove(column);
-  }, [engine]);
+  const validateMove = useCallback(
+    (column: number): boolean => {
+      return engine.validateMove(column);
+    },
+    [engine],
+  );
 
   return {
-    validateMove
+    validateMove,
   };
 }
-

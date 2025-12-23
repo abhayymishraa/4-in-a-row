@@ -1,7 +1,7 @@
-import { Board } from './Board';
-import { WinChecker } from './WinChecker';
+import { Board } from "./Board";
+import { WinChecker } from "./WinChecker";
 
-export type GameStatus = 'playing' | 'won' | 'draw';
+export type GameStatus = "playing" | "won" | "draw";
 
 export interface MoveResult {
   row: number;
@@ -41,17 +41,24 @@ export class GameEngine {
 
     const placedPlayer = newBoard.getCell(row, column);
     if (placedPlayer !== this.currentPlayer) {
-      throw new Error(`Disc placement mismatch: expected ${this.currentPlayer}, got ${placedPlayer}`);
+      throw new Error(
+        `Disc placement mismatch: expected ${this.currentPlayer}, got ${placedPlayer}`,
+      );
     }
 
-    const winResult = WinChecker.checkWin(row, column, this.currentPlayer, newBoard);
+    const winResult = WinChecker.checkWin(
+      row,
+      column,
+      this.currentPlayer,
+      newBoard,
+    );
     if (winResult) {
       this.board = newBoard;
       return {
         row,
         col: column,
-        status: 'won',
-        winner: this.currentPlayer
+        status: "won",
+        winner: this.currentPlayer,
       };
     }
 
@@ -60,7 +67,7 @@ export class GameEngine {
       return {
         row,
         col: column,
-        status: 'draw'
+        status: "draw",
       };
     }
 
@@ -70,23 +77,19 @@ export class GameEngine {
     return {
       row,
       col: column,
-      status: 'playing'
+      status: "playing",
     };
   }
 
   getGameStatus(): GameStatus {
     const winner = WinChecker.findWinner(this.board);
     if (winner) {
-      return 'won';
+      return "won";
     }
     if (this.board.isFull()) {
-      return 'draw';
+      return "draw";
     }
-    return 'playing';
-  }
-
-  hasWinner(): boolean {
-    return WinChecker.findWinner(this.board) !== null;
+    return "playing";
   }
 
   getWinner(): number | null {
@@ -108,13 +111,7 @@ export class GameEngine {
     return -1;
   }
 
-  checkDraw(): boolean {
-    return this.board.isFull();
-  }
-
   clone(): GameEngine {
     return new GameEngine(this.board, this.currentPlayer);
   }
 }
-
-

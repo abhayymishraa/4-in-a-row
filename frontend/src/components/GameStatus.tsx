@@ -25,14 +25,14 @@ const GameStatus: React.FC<GameStatusProps> = ({ game, currentUsername }) => {
   }
 
   return (
-    <div style={{ marginBottom: '20px', padding: '10px', background: '#fff', borderRadius: '4px' }}>
-      <div style={{ marginBottom: '5px' }}>
+    <div className="mb-5 p-3 bg-white rounded-lg shadow-sm">
+      <div className="mb-2">
         <strong>Player 1:</strong> {game.player1.username} {game.player1.type === 'bot' && '(Bot)'}
       </div>
-      <div style={{ marginBottom: '5px' }}>
+      <div className="mb-2">
         <strong>Player 2:</strong> {game.player2.username} {game.player2.type === 'bot' && '(Bot)'}
       </div>
-      <div style={{ marginTop: '10px', fontSize: '18px', fontWeight: 'bold', color: isGameOver ? '#4caf50' : '#2196f3' }}>
+      <div className={`mt-3 text-lg font-bold ${isGameOver ? 'text-green-500' : 'text-blue-500'}`}>
         {statusMessage}
       </div>
     </div>
@@ -40,4 +40,3 @@ const GameStatus: React.FC<GameStatusProps> = ({ game, currentUsername }) => {
 };
 
 export default GameStatus;
-

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { GameEngine } from '../core/GameEngine';
+import { GameEngine, GameStatus } from '../core/GameEngine';
 import { Board } from '../core/Board';
 
 export function useGameEngine(gameData: any) {
@@ -8,7 +8,8 @@ export function useGameEngine(gameData: any) {
   useEffect(() => {
     if (gameData && gameData.board) {
       const board = new Board(gameData.board);
-      const newEngine = new GameEngine(board);
+      const currentPlayerNumber = gameData.currentPlayer?.id === gameData.player1?.id ? 1 : 2;
+      const newEngine = new GameEngine(board, currentPlayerNumber);
       setEngine(newEngine);
     }
   }, [gameData]);
@@ -17,8 +18,20 @@ export function useGameEngine(gameData: any) {
     return engine.validateMove(column);
   }, [engine]);
 
+  const getGameStatus = useCallback((): GameStatus => {
+    return engine.getGameStatus();
+  }, [engine]);
+
+  const isPlayerTurn = useCallback((playerId: string, currentPlayerId: string): boolean => {
+    return playerId === currentPlayerId;
+  }, []);
+
   return {
-    validateMove
+    engine,
+    validateMove,
+    getGameStatus,
+    isPlayerTurn,
+    board: engine.getBoard()
   };
 }
 

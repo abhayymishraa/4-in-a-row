@@ -27,10 +27,10 @@ const PlayerInput: React.FC<PlayerInputProps> = ({ onCreateGame, onJoinGame }) =
   };
 
   return (
-    <div style={{ marginTop: '20px' }}>
+    <div className="mt-5">
       <form onSubmit={handleCreateGame}>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="username" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+        <div className="mb-4">
+          <label htmlFor="username" className="block mb-2 font-semibold text-gray-700">
             Username (Required):
           </label>
           <input
@@ -40,20 +40,12 @@ const PlayerInput: React.FC<PlayerInputProps> = ({ onCreateGame, onJoinGame }) =
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Enter your username"
             required
-            style={{
-              padding: '10px',
-              fontSize: '16px',
-              width: '100%',
-              maxWidth: '400px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              boxSizing: 'border-box'
-            }}
+            className="w-full max-w-md px-3 py-2 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="gameId" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+        <div className="mb-4">
+          <label htmlFor="gameId" className="block mb-2 font-semibold text-gray-700">
             Game ID (Optional - for joining existing game):
           </label>
           <input
@@ -62,31 +54,14 @@ const PlayerInput: React.FC<PlayerInputProps> = ({ onCreateGame, onJoinGame }) =
             value={gameId}
             onChange={(e) => setGameId(e.target.value)}
             placeholder="Enter game ID to join"
-            style={{
-              padding: '10px',
-              fontSize: '16px',
-              width: '100%',
-              maxWidth: '400px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              boxSizing: 'border-box'
-            }}
+            className="w-full max-w-md px-3 py-2 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="flex gap-3 flex-wrap">
           <button
             type="submit"
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              backgroundColor: '#4caf50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
+            className="px-5 py-2 text-base font-semibold text-white bg-green-500 rounded-lg cursor-pointer hover:bg-green-600 transition-colors"
           >
             Create Game
           </button>
@@ -95,17 +70,11 @@ const PlayerInput: React.FC<PlayerInputProps> = ({ onCreateGame, onJoinGame }) =
             type="button"
             onClick={handleJoinGame}
             disabled={!username.trim() || !gameId.trim()}
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              backgroundColor: gameId.trim() ? '#2196f3' : '#ccc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: gameId.trim() ? 'pointer' : 'not-allowed',
-              fontWeight: 'bold',
-              opacity: gameId.trim() ? 1 : 0.6
-            }}
+            className={`px-5 py-2 text-base font-semibold text-white rounded-lg transition-colors ${
+              gameId.trim() 
+                ? 'bg-blue-500 hover:bg-blue-600 cursor-pointer' 
+                : 'bg-gray-400 cursor-not-allowed opacity-60'
+            }`}
           >
             Join Game
           </button>

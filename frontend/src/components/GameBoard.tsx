@@ -33,80 +33,41 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onMakeMove, currentUsername
   };
 
   const getCellColor = (cell: number): string => {
-    if (cell === 0) return '#e0e0e0';
-    if (cell === 1) return '#f44336';
-    return '#2196f3';
+    if (cell === 0) return 'bg-gray-300';
+    if (cell === 1) return 'bg-red-500';
+    return 'bg-blue-500';
   };
 
   return (
-    <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div className="mt-5 flex flex-col items-center">
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${board[0].length}, 50px)`,
-          gap: '5px',
-          marginBottom: '5px',
-          padding: '0 10px'
-        }}
+        className="grid gap-1.5 mb-1.5 px-2.5"
+        style={{ gridTemplateColumns: `repeat(${board[0].length}, 50px)` }}
       >
         {board[0].map((_cell: number, col: number) => (
           <button
             key={col}
             onClick={() => handleColumnClick(col)}
             disabled={isGameOver || !isCurrentPlayerTurn}
-            style={{
-              width: '50px',
-              height: '40px',
-              padding: '0',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              backgroundColor: isGameOver || !isCurrentPlayerTurn ? '#ccc' : '#4caf50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isGameOver || !isCurrentPlayerTurn ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              if (!isGameOver && isCurrentPlayerTurn) {
-                e.currentTarget.style.backgroundColor = '#45a049';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isGameOver && isCurrentPlayerTurn) {
-                e.currentTarget.style.backgroundColor = '#4caf50';
-              }
-            }}
+            className={`w-[50px] h-10 p-0 text-base font-bold text-white rounded border-none transition-colors ${
+              isGameOver || !isCurrentPlayerTurn
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-green-500 hover:bg-green-600 cursor-pointer'
+            }`}
           >
             {col + 1}
           </button>
         ))}
       </div>
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${board[0].length}, 50px)`,
-          gap: '5px',
-          padding: '10px',
-          background: '#fff',
-          borderRadius: '8px',
-          border: '2px solid #333'
-        }}
+        className="grid gap-1.5 p-2.5 bg-white rounded-lg border-2 border-gray-800"
+        style={{ gridTemplateColumns: `repeat(${board[0].length}, 50px)` }}
       >
         {board.map((row: number[], rowIndex: number) =>
           row.map((cell: number, colIndex: number) => (
             <div
               key={`${rowIndex}-${colIndex}`}
-              style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: '50%',
-                backgroundColor: getCellColor(cell),
-                border: '2px solid #333',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
+              className={`w-[50px] h-[50px] rounded-full border-2 border-gray-800 flex items-center justify-center ${getCellColor(cell)}`}
             />
           ))
         )}
@@ -116,4 +77,3 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, onMakeMove, currentUsername
 };
 
 export default GameBoard;
-

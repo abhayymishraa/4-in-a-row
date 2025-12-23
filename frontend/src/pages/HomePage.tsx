@@ -17,22 +17,26 @@ function HomePage() {
     }
 
     const handleGameCreated = (data: { gameId: string; game: any; botJoinTime: number }) => {
+      console.log('Game created:', data.gameId);
       localStorage.setItem('gameId', data.gameId);
       localStorage.setItem('isGameCreator', 'true');
       navigate(`/game/${data.gameId}`);
     };
 
     const handleGameUpdate = (gameData: any) => {
+      console.log('Game update:', gameData.id);
       navigate(`/game/${gameData.id}`);
     };
 
     const handleUsernameTaken = (data: { requestedUsername: string; assignedUsername: string; message: string }) => {
+      console.warn('Username taken:', data.message);
       localStorage.setItem('username', data.assignedUsername);
       setError(data.message);
       setTimeout(() => setError(''), 5000);
     };
 
     const handleError = (data: { message: string }) => {
+      console.error('Socket error:', data.message);
       setError(data.message || 'An error occurred. Please try again.');
     };
 
@@ -40,12 +44,18 @@ function HomePage() {
     socket.on('game-update', handleGameUpdate);
     socket.on('username-taken', handleUsernameTaken);
     socket.on('error', handleError);
+    
+    socket.on('game-over', () => {
+      fetchLeaderboard();
+    });
 
     socket.on('connect', () => {
+      console.log('Socket connected');
       setError('');
     });
 
     socket.on('disconnect', () => {
+      console.log('Socket disconnected');
       setError('Connection lost. Please refresh the page.');
     });
 
@@ -54,6 +64,7 @@ function HomePage() {
       socket.off('game-update', handleGameUpdate);
       socket.off('username-taken', handleUsernameTaken);
       socket.off('error', handleError);
+      socket.off('game-over');
       socket.off('connect');
       socket.off('disconnect');
     };
@@ -61,6 +72,12 @@ function HomePage() {
 
   useEffect(() => {
     fetchLeaderboard();
+    
+    const interval = setInterval(() => {
+      fetchLeaderboard();
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchLeaderboard = async () => {
@@ -97,6 +114,7 @@ function HomePage() {
     }
 
     setError('');
+    console.log('Creating game with username:', username);
     socket.emit('create-game', { username: username.trim() });
   };
 
@@ -122,27 +140,28 @@ function HomePage() {
     }
 
     setError('');
+    console.log('Joining game:', gameId, 'with username:', username);
     socket.emit('join-game', { username: username.trim(), gameId: gameId.trim() });
   };
 
   return (
-    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', padding: '20px' }}>
-      <div style={{ flex: '1', minWidth: '300px' }}>
-        <h1>4-in-a-Row Game</h1>
+    <div className="flex gap-5 flex-wrap p-5">
+      <div className="flex-1 min-w-[300px]">
+        <h1 className="text-4xl font-bold mb-6 text-gray-800">4-in-a-Row Game</h1>
         {error && (
-          <div style={{ padding: '10px', background: '#ffebee', color: '#c62828', marginBottom: '10px', borderRadius: '4px' }}>
+          <div className="p-3 bg-red-50 text-red-700 mb-4 rounded-lg border border-red-200">
             {error}
           </div>
         )}
         <PlayerInput onCreateGame={handleCreateGame} onJoinGame={handleJoinGame} />
-        <div style={{ marginTop: '20px', padding: '10px', background: '#e3f2fd', color: '#1565c0', borderRadius: '4px' }}>
-          <p><strong>Create Game:</strong> Enter your username and click "Create Game" to start a new game room.</p>
-          <p><strong>Join Game:</strong> Enter your username and a game ID to join an existing game.</p>
+        <div className="mt-5 p-4 bg-blue-50 text-blue-800 rounded-lg border border-blue-200">
+          <p className="mb-2"><strong>Create Game:</strong> Enter your username and click "Create Game" to start a new game room.</p>
+          <p className="mb-2"><strong>Join Game:</strong> Enter your username and a game ID to join an existing game.</p>
           <p>If no opponent joins within 10 seconds, a bot will automatically join your game.</p>
         </div>
       </div>
-      <div style={{ flex: '0 0 300px' }}>
-        <Leaderboard leaderboard={leaderboard} />
+      <div className="flex-none w-[300px]">
+        <Leaderboard leaderboard={leaderboard} onRefresh={fetchLeaderboard} />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../services/socket';
+import { getApiUrl } from '../config/api';
 import PlayerInput from '../components/PlayerInput';
 import Leaderboard from '../components/Leaderboard';
 
@@ -82,7 +83,8 @@ function HomePage() {
 
   const fetchLeaderboard = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/leaderboard');
+      const apiUrl = getApiUrl();
+      const response = await fetch(`${apiUrl}/api/leaderboard`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

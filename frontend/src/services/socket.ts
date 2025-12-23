@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { getApiUrl } from '../config/api';
 
-// Provide correct type for import.meta.env and avoid linting error
-const SOCKET_URL: string =
-  (import.meta as ImportMeta & { env: { VITE_API_URL?: string } }).env.VITE_API_URL ||
-  'http://localhost:3000';
+const SOCKET_URL: string = getApiUrl();
 
 let globalSocket: Socket | null = null;
 

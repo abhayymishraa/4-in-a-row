@@ -36,7 +36,7 @@ export class DatabaseService {
       sslConfig = false;
     } else {
       // Auto-detect: enable SSL for production or known cloud providers
-      const cloudHosts = ['supabase.co', 'railway.app', 'render.com', 'fly.dev', 'aws', 'azure', 'gcp', 'cloud'];
+      const cloudHosts = ['supabase.co', 'railway.app', 'render.com', 'fly.dev', 'aws', 'azure', 'gcp', 'cloud', 'neon.tech'];
       const isCloudHost = cloudHosts.some(host => dbHost.includes(host)) || isProduction;
       sslConfig = isCloudHost ? { rejectUnauthorized: false } : false;
     }
@@ -59,7 +59,7 @@ export class DatabaseService {
       password: dbPassword,
       max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
       ssl: sslConfig,
       // Note: The 'family' property is not part of the official PoolConfig type for 'pg'
       // and may cause type errors with strict TypeScript settings.
@@ -86,29 +86,33 @@ export class DatabaseService {
       return;
     }
     try {
-      // Test connection with retry logic for network issues
-      let connectionTestPassed = false;
-      const maxRetries = 3;
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      // Test connection with 60 second total timeout
+      const startTime = Date.now();
+      const timeoutMs = 60000;
+      let connected = false;
+      
+      while (!connected && (Date.now() - startTime) < timeoutMs) {
         try {
           await this.pool.query('SELECT 1');
-          connectionTestPassed = true;
-          break;
+          connected = true;
         } catch (error: any) {
-          if (attempt === maxRetries) {
-            throw error;
+          const elapsed = Date.now() - startTime;
+          if (elapsed >= timeoutMs) {
+            throw new Error(`Database connection failed after 60 seconds: ${error?.message || error}`);
           }
-          logger.warn(`Database connection test attempt ${attempt}/${maxRetries} failed, retrying...`, {
+          const remaining = Math.round((timeoutMs - elapsed) / 1000);
+          logger.warn(`Database connection failed, retrying... (${remaining}s remaining)`, {
             error: error?.message,
             code: error?.code
           });
-          await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+          await new Promise(resolve => setTimeout(resolve, 3000));
         }
       }
       
-      if (!connectionTestPassed) {
-        throw new Error('Database connection test failed after retries');
+      if (!connected) {
+        throw new Error('Database connection failed: timeout after 60 seconds');
       }
+      
       logger.info('Database connection test successful', { 
         host: process.env.DB_HOST,
         database: process.env.DB_NAME 

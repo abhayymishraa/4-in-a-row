@@ -16,7 +16,8 @@
    - Add environment variables from `env/backend.env.example`:
      - Get DB credentials from PostgreSQL service (Railway auto-provides them)
      - Set `PORT` to Railway's assigned port (or leave empty, it auto-assigns)
-     - `KAFKA_BROKERS` can be left empty (optional)
+     - **IMPORTANT**: Set `DB_SSL=true` (Railway requires SSL for database connections)
+   - **Database schema is created automatically** when backend starts (no manual commands needed!)
 5. **Deploy Frontend**:
    - Click "+ New" → "GitHub Repo" → Select your repo  
    - Set **Root Directory**: `frontend`
@@ -104,10 +105,17 @@ DB_PORT=5432
 DB_NAME=emittr_game
 DB_USER=postgres
 DB_PASSWORD=your-password    # From your database provider
-KAFKA_BROKERS=               # Optional, leave empty if not using
-KAFKA_CLIENT_ID=emittr-game-backend
+DB_SSL=true                  # REQUIRED for cloud databases (Railway, Render, Fly.io)
 LOG_LEVEL=info
 ```
+
+**Important**: Most cloud databases require SSL. Set `DB_SSL=true` for:
+- Railway
+- Render
+- Fly.io
+- Any cloud-hosted PostgreSQL
+
+The code will auto-detect SSL requirement for known providers, but it's safer to set it explicitly.
 
 ### Frontend (.env file in `frontend/` directory)
 
@@ -124,8 +132,10 @@ VITE_API_URL=https://your-backend-url.com
 ## Important Notes
 
 1. **WebSockets**: All recommended platforms support WebSockets natively - no extra config needed
-2. **Kafka is Optional**: Your app works fine without Kafka (it's already handled gracefully)
-3. **Database**: Most platforms provide managed PostgreSQL - use their connection strings
+2. **Database Schema**: **Automatically created on first server start** - no manual commands needed!
+   - The backend reads `backend/src/models/schema.sql` and executes it automatically
+   - Uses `CREATE TABLE IF NOT EXISTS` - safe to run multiple times
+   - Just set DB environment variables and deploy - schema will be created automatically
 4. **CORS**: Backend already allows all origins (`*`). For production, consider restricting to your frontend domain
 5. **HTTPS**: All platforms provide automatic HTTPS - make sure `VITE_API_URL` uses `https://`
 
@@ -135,11 +145,13 @@ VITE_API_URL=https://your-backend-url.com
 
 - [ ] Choose a platform (Railway recommended)
 - [ ] Set up PostgreSQL database
-- [ ] Deploy backend with environment variables
+- [ ] Deploy backend with environment variables (schema auto-creates on start!)
 - [ ] Get backend public URL
 - [ ] Deploy frontend with `VITE_API_URL` pointing to backend
 - [ ] Test WebSocket connection
 - [ ] Test game functionality
+
+**Note**: No need to manually run database migrations or schema setup - it happens automatically when the backend starts!
 
 ---
 
@@ -152,8 +164,10 @@ VITE_API_URL=https://your-backend-url.com
 
 **Database connection failed?**
 - Verify all DB environment variables are set correctly
+- **Set `DB_SSL=true` for cloud databases** (most common issue!)
 - Check database is accessible from backend service
 - Ensure database is running
+- Test connection: Visit `https://your-backend-url.com/api/db-test` to verify
 
 **Build failures?**
 - Check build logs for specific errors

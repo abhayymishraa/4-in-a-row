@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import { GameStateManager } from './services/GameStateManager';
 import { MatchmakingService } from './services/MatchmakingService';
 import { DatabaseService } from './services/DatabaseService';
-import { KafkaProducer } from './services/KafkaProducer';
 import { WebSocketHandler } from './api/websocket';
 import { createRoutes } from './api/routes';
 import { logger } from './config/logger';
@@ -17,7 +16,7 @@ const httpServer = createServer(app);
 app.use(express.json());
 app.use(express.static('public'));
 
-app.use((req, res, next) => {
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
@@ -31,14 +30,12 @@ app.use((req, res, next) => {
 const gameStateManager = new GameStateManager();
 const databaseService = new DatabaseService();
 const matchmakingService = new MatchmakingService(gameStateManager);
-const kafkaProducer = new KafkaProducer();
 
 new WebSocketHandler(
   httpServer,
   gameStateManager,
   matchmakingService,
-  databaseService,
-  kafkaProducer
+  databaseService
 );
 
 app.use('/api', createRoutes(databaseService));
@@ -72,10 +69,6 @@ async function startServer() {
       logger.error('⚠️  All database save operations (savePlayer, saveGame) will be skipped until database is initialized');
     }
 
-    await kafkaProducer.connect().catch((error) => {
-      logger.warn('Kafka connection failed, but server will continue without analytics', { error });
-    });
-
     const port = process.env.PORT || 3000;
     httpServer.listen(port, () => {
       logger.info(`Server started on port ${port}`, {
@@ -91,7 +84,6 @@ async function startServer() {
 
     process.on('SIGTERM', async () => {
       logger.info('SIGTERM received, shutting down gracefully');
-      await kafkaProducer.disconnect().catch(() => {});
       await databaseService.close().catch(() => {});
       process.exit(0);
     });

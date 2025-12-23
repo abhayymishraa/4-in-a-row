@@ -4,7 +4,6 @@ import { GameStateManager } from '../services/GameStateManager';
 import { MatchmakingService } from '../services/MatchmakingService';
 import { BotService } from '../services/BotService';
 import { DatabaseService } from '../services/DatabaseService';
-import { KafkaProducer } from '../services/KafkaProducer';
 import { Player } from '../core/Player';
 import { logger } from '../config/logger';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,7 +20,6 @@ export class WebSocketHandler {
   private gameStateManager: GameStateManager;
   private matchmakingService: MatchmakingService;
   private databaseService: DatabaseService;
-  private kafkaProducer: KafkaProducer;
   private socketPlayers: Map<string, SocketPlayer>;
   private activeUsernames: Map<string, string>; // username -> socketId
   private readonly RECONNECTION_TIMEOUT_MS = 30000;
@@ -30,8 +28,7 @@ export class WebSocketHandler {
     httpServer: HTTPServer,
     gameStateManager: GameStateManager,
     matchmakingService: MatchmakingService,
-    databaseService: DatabaseService,
-    kafkaProducer: KafkaProducer
+    databaseService: DatabaseService
   ) {
     this.io = new SocketIOServer(httpServer, {
       cors: {
@@ -43,7 +40,6 @@ export class WebSocketHandler {
     this.gameStateManager = gameStateManager;
     this.matchmakingService = matchmakingService;
     this.databaseService = databaseService;
-    this.kafkaProducer = kafkaProducer;
     this.socketPlayers = new Map();
     this.activeUsernames = new Map();
 
@@ -87,7 +83,6 @@ export class WebSocketHandler {
       return;
     }
 
-    await this.kafkaProducer.emitGameStarted(gameId, player1.id, player2.id);
 
     let playersFound = 0;
     for (const [socketId, socketPlayer] of this.socketPlayers.entries()) {
@@ -405,8 +400,6 @@ export class WebSocketHandler {
         const botPlayer = new Player(uuidv4(), 'Bot', 'bot');
         const game = this.gameStateManager.createGame(player, botPlayer, gameId);
         
-        await this.kafkaProducer.emitGameStarted(gameId, player.id, botPlayer.id);
-        
         this.io.to(gameId).emit('game-update', game.toJSON());
         logger.info('Bot joined game after timeout', { gameId, playerId: player.id });
       };
@@ -423,7 +416,6 @@ export class WebSocketHandler {
         }
 
         const game = this.gameStateManager.createGame(player, matchedPlayer, gameId);
-        await this.kafkaProducer.emitGameStarted(gameId, player.id, matchedPlayer.id).catch(() => {});
         this.io.to(gameId).emit('game-update', game.toJSON());
         logger.info('Human opponent matched', { gameId, player1Id: player.id, player2Id: matchedPlayer.id });
       });
@@ -505,8 +497,6 @@ export class WebSocketHandler {
       const board = game.getEngine().getBoard();
       const row = this.findRowForColumn(column, board);
 
-      await this.kafkaProducer.emitMoveMade(gameId, socketPlayer.player.id, column, row);
-
       const gameStatus = game.getStatus();
       const gameData = game.toJSON();
 
@@ -570,8 +560,6 @@ export class WebSocketHandler {
       const board = game.getEngine().getBoard();
       const row = this.findRowForColumn(column, board);
 
-      await this.kafkaProducer.emitMoveMade(gameId, currentPlayer.id, column, row);
-
       const gameStatus = game.getStatus();
       const gameData = game.toJSON();
 
@@ -610,7 +598,6 @@ export class WebSocketHandler {
               this.gameStateManager.updateGame(gameId, game);
               const board = game.getEngine().getBoard();
               const row = this.findRowForColumn(fallbackColumn, board);
-              await this.kafkaProducer.emitMoveMade(gameId, currentPlayer.id, fallbackColumn, row);
               this.io.to(gameId).emit('move-made', {
                 gameId,
                 playerId: currentPlayer.id,
@@ -656,12 +643,6 @@ export class WebSocketHandler {
         status: gameStatus,
         winner: winnerData?.username || null
       });
-
-      await this.kafkaProducer.emitGameCompleted(
-        game.id,
-        game.getWinner()?.id || null,
-        gameStatus
-      );
     } catch (error) {
       logger.error('Error saving game data', { error, gameId: game.id });
     }
@@ -760,8 +741,6 @@ export class WebSocketHandler {
           playerId: socketPlayer.player.id
         });
 
-        this.kafkaProducer.emitPlayerDisconnected(socketPlayer.gameId, socketPlayer.player.id);
-
         setTimeout(async () => {
           const stillDisconnected = this.socketPlayers.get(socket.id);
           if (stillDisconnected && stillDisconnected.disconnectedAt) {
@@ -790,8 +769,6 @@ export class WebSocketHandler {
         gameId: game.id 
       });
     }
-    
-    await this.kafkaProducer.emitGameCompleted(game.id, winner.id, 'won');
 
     this.io.to(game.id).emit('game-over', {
       game: game.toJSON(),

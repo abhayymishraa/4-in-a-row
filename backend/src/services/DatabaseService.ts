@@ -25,13 +25,30 @@ export class DatabaseService {
     const dbName = process.env.DB_NAME || 'emittr_game';
     const dbUser = process.env.DB_USER || 'postgres';
     const dbPassword = process.env.DB_PASSWORD || 'postgres';
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Determine SSL configuration
+    // Most cloud databases require SSL in production
+    let sslConfig: any = false;
+    if (process.env.DB_SSL === 'true' || process.env.DB_SSL === 'required') {
+      sslConfig = { rejectUnauthorized: false };
+    } else if (process.env.DB_SSL === 'false') {
+      sslConfig = false;
+    } else {
+      // Auto-detect: enable SSL for production or known cloud providers
+      const cloudHosts = ['supabase.co', 'railway.app', 'render.com', 'fly.dev', 'aws', 'azure', 'gcp', 'cloud'];
+      const isCloudHost = cloudHosts.some(host => dbHost.includes(host)) || isProduction;
+      sslConfig = isCloudHost ? { rejectUnauthorized: false } : false;
+    }
     
     logger.info('Initializing database connection pool', {
       host: dbHost,
       port: dbPort,
       database: dbName,
       user: dbUser,
-      hasPassword: !!dbPassword
+      hasPassword: !!dbPassword,
+      ssl: sslConfig ? 'enabled' : 'disabled',
+      isProduction
     });
 
     this.pool = new Pool({
@@ -42,8 +59,8 @@ export class DatabaseService {
       password: dbPassword,
       max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
-      ssl: dbHost.includes('supabase.co') ? { rejectUnauthorized: false } : false,
+      connectionTimeoutMillis: 30000,
+      ssl: sslConfig,
     });
 
     this.pool.on('error', (err: any) => {
@@ -212,6 +229,18 @@ export class DatabaseService {
       return;
     }
 
+    // Verify connection is still alive before attempting save
+    try {
+      await this.pool.query('SELECT 1');
+    } catch (error: any) {
+      logger.error('Database connection lost, cannot save game', {
+        error: error?.message,
+        code: error?.code,
+        gameId: game.id
+      });
+      return;
+    }
+
     logger.debug('💾 Attempting to save game to database', { 
       gameId: game.id,
       status: game.getStatus(),
@@ -324,8 +353,19 @@ export class DatabaseService {
         code: error?.code,
         gameId: game.id,
         status: game.getStatus(),
+        host: process.env.DB_HOST,
+        database: process.env.DB_NAME,
         stack: error?.stack
       });
+      
+      // Check if it's a connection error and log helpful message
+      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
+        logger.error('Database connection error - check DB_HOST, DB_PORT, and network connectivity');
+      } else if (error.code === '28P01') {
+        logger.error('Database authentication failed - check DB_USER and DB_PASSWORD');
+      } else if (error.code === '3D000') {
+        logger.error('Database does not exist - check DB_NAME');
+      }
     } finally {
       if (client) {
         client.release();

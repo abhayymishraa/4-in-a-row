@@ -45,8 +45,12 @@ app.use('/api', createRoutes(databaseService));
 
 async function startServer() {
   try {
-    await databaseService.initialize();
-    logger.info('Database initialized');
+    await databaseService.initialize().catch((error) => {
+      logger.warn('Database initialization failed, but server will continue without persistence', { 
+        error: error?.message || error,
+        code: error?.code 
+      });
+    });
 
     await kafkaProducer.connect().catch((error) => {
       logger.warn('Kafka connection failed, but server will continue without analytics', { error });
@@ -63,8 +67,8 @@ async function startServer() {
 
     process.on('SIGTERM', async () => {
       logger.info('SIGTERM received, shutting down gracefully');
-      await kafkaProducer.disconnect();
-      await databaseService.close();
+      await kafkaProducer.disconnect().catch(() => {});
+      await databaseService.close().catch(() => {});
       process.exit(0);
     });
   } catch (error) {

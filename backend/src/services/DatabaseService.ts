@@ -37,6 +37,15 @@ export class DatabaseService {
 
   async initialize(): Promise<void> {
     try {
+      await this.pool.query('SELECT 1').catch((error: any) => {
+        logger.warn('Database connection test failed', { 
+          error: error?.message || error,
+          code: error?.code,
+          host: process.env.DB_HOST 
+        });
+        throw error;
+      });
+
       const fs = require('fs');
       const path = require('path');
       const schemaPath = path.join(__dirname, '../models/schema.sql');
@@ -55,8 +64,12 @@ export class DatabaseService {
       });
       
       logger.info('Database schema initialized');
-    } catch (error) {
-      logger.error('Failed to initialize database schema', { error });
+    } catch (error: any) {
+      logger.error('Failed to initialize database schema', { 
+        error: error?.message || error,
+        code: error?.code,
+        host: process.env.DB_HOST 
+      });
       throw error;
     }
   }
@@ -97,7 +110,17 @@ export class DatabaseService {
   }
 
   async saveGame(game: Game): Promise<void> {
-    const client = await this.pool.connect();
+    let client;
+    try {
+      client = await this.pool.connect();
+    } catch (error: any) {
+      logger.warn('Failed to get database connection for game save', { 
+        error: error?.message || error,
+        code: error?.code,
+        gameId: game.id 
+      });
+      return;
+    }
     
     try {
       await client.query('BEGIN');
@@ -173,7 +196,9 @@ export class DatabaseService {
         logger.error('Failed to save game', { error, gameId: game.id });
       }
     } finally {
-      client.release();
+      if (client) {
+        client.release();
+      }
     }
   }
 
@@ -197,9 +222,13 @@ export class DatabaseService {
         username: row.username,
         gamesWon: parseInt(row.games_won) || 0
       };
-    } catch (error) {
-      logger.error('Failed to get player stats', { error, playerId });
-      throw error;
+    } catch (error: any) {
+      logger.error('Failed to get player stats', { 
+        error: error?.message || error,
+        code: error?.code,
+        playerId 
+      });
+      return null;
     }
   }
 
